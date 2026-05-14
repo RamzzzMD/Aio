@@ -10,17 +10,22 @@ import {
   Copy,
   Download,
   FileVideo,
+  Github, // Tambahan
   Globe2,
   HelpCircle,
   ImageIcon,
   Link2,
   Loader2,
+  MessageCircle, // Tambahan (WhatsApp)
   Music,
   PlayCircle,
+  QrCode, // Tambahan (QRIS)
+  Send, // Tambahan (Telegram)
   ShieldCheck,
   Sparkles,
   UserRound,
   Wand2,
+  X, // Tambahan
   Zap,
 } from "lucide-react";
 import { Toaster, toast } from "sonner";
@@ -37,29 +42,24 @@ const platforms = [
 
 const faqs = [
   {
-    question: "What is Ranzz Downloader?",
+    question: "Apa itu Ranzz Downloader?",
     answer:
-      "A professional, all-in-one social media downloader featuring a clean user interface and secure backend processing.",
+      "Aplikasi downloader media all-in-one yang profesional dengan antarmuka bersih dan integrasi backend yang aman.",
   },
   {
-    question: "Which platforms are supported?",
+    question: "Platform apa saja yang didukung?",
     answer:
-      "The app supports TikTok, Instagram, Facebook, X/Twitter, YouTube, Pinterest, Threads, and more depending on availability.",
+      "Mendukung TikTok, Instagram, Facebook, X/Twitter, YouTube, Pinterest, Threads, dan lainnya.",
   },
   {
-    question: "Is it secure?",
+    question: "Apakah aman?",
     answer:
-      "Yes. All processing is handled securely on the server side without exposing any sensitive configuration to the browser.",
+      "Ya. Semua pemrosesan ditangani secara aman di sisi server tanpa mengekspos konfigurasi sensitif ke browser.",
   },
   {
-    question: "Why does some media fail to download?",
+    question: "Siapa pengembangnya?",
     answer:
-      "Some videos may be private, deleted, region-restricted, or simply unsupported by the current media resolution provider.",
-  },
-  {
-    question: "Who is the developer?",
-    answer:
-      "This application is engineered by Ranzz, specializing in modern full-stack web architecture and minimalist UI/UX design.",
+      "Aplikasi ini dikembangkan oleh Ranzz, spesialis full-stack web architecture dan desain UI/UX minimalis.",
   },
 ];
 
@@ -76,7 +76,6 @@ function pick(...values) {
 function detectExtension(url = "", type = "") {
   const lowerUrl = url.toLowerCase();
   const lowerType = type.toLowerCase();
-
   if (lowerType.includes("audio")) return "mp3";
   if (lowerType.includes("image")) return "jpg";
   if (lowerUrl.includes(".mp3")) return "mp3";
@@ -86,7 +85,6 @@ function detectExtension(url = "", type = "") {
   if (lowerUrl.includes(".png")) return "png";
   if (lowerUrl.includes(".webp")) return "webp";
   if (lowerUrl.includes(".mov")) return "mov";
-
   return "mp4";
 }
 
@@ -99,177 +97,33 @@ function sanitizeClientFileName(value) {
 
 function normalizeApiResponse(apiData) {
   const root = apiData?.data || apiData?.result || apiData || {};
-
-  const title =
-    pick(
-      root.title,
-      root.caption,
-      root.description,
-      root.text,
-      root.name,
-      root.fulltitle
-    ) || "Untitled Media";
-
-  const author =
-    pick(
-      root.author,
-      root.uploader,
-      root.username,
-      root.user,
-      root.channel,
-      root.creator
-    ) || "Unknown Creator";
-
-  const thumbnail =
-    pick(
-      root.thumbnail,
-      root.thumb,
-      root.cover,
-      root.image,
-      root.preview,
-      root.poster
-    ) || "";
-
-  const source =
-    pick(root.source, root.platform, root.extractor, root.service) ||
-    "Social Platform";
-
-  const possibleDownloads =
-    root.medias ||
-    root.media ||
-    root.links ||
-    root.downloads ||
-    root.files ||
-    root.items ||
-    [];
-
+  const title = pick(root.title, root.caption, root.description, root.text, root.name, root.fulltitle) || "Untitled Media";
+  const author = pick(root.author, root.uploader, root.username, root.user, root.channel, root.creator) || "Unknown Creator";
+  const thumbnail = pick(root.thumbnail, root.thumb, root.cover, root.image, root.preview, root.poster) || "";
+  const source = pick(root.source, root.platform, root.extractor, root.service) || "Social Platform";
+  const possibleDownloads = root.medias || root.media || root.links || root.downloads || root.files || root.items || [];
   let downloads = Array.isArray(possibleDownloads) ? possibleDownloads : [];
 
   if (!downloads.length) {
-    const directCandidates = [
-      root.url,
-      root.downloadUrl,
-      root.download_url,
-      root.video,
-      root.audio,
-    ].filter(Boolean);
-
-    downloads = directCandidates.map((url, index) => ({
-      url,
-      quality: index === 0 ? "Default" : `Media ${index + 1}`,
-    }));
+    const directCandidates = [root.url, root.downloadUrl, root.download_url, root.video, root.audio].filter(Boolean);
+    downloads = directCandidates.map((url, index) => ({ url, quality: index === 0 ? "Default" : `Media ${index + 1}` }));
   }
 
-  const mappedDownloads = downloads
-    .map((item, index) => {
-      const entry = typeof item === "string" ? { url: item } : item || {};
+  const mappedDownloads = downloads.map((item, index) => {
+    const entry = typeof item === "string" ? { url: item } : item || {};
+    const fileUrl = pick(entry.url, entry.link, entry.href, entry.download, entry.downloadUrl, entry.download_url, entry.video, entry.audio);
+    if (!fileUrl) return null;
+    const type = pick(entry.type, entry.mimeType, entry.mime, entry.format) || "video";
+    const extension = pick(entry.extension, entry.ext) || detectExtension(fileUrl, type);
+    const quality = pick(entry.quality, entry.resolution, entry.label, entry.name, entry.format_id, entry.format) || `File ${index + 1}`;
+    const size = pick(entry.size, entry.filesize, entry.fileSize, entry.sizeLabel) || "";
+    return { id: `${fileUrl}-${index}`, url: fileUrl, type, extension, quality, size };
+  }).filter(Boolean);
 
-      const fileUrl = pick(
-        entry.url,
-        entry.link,
-        entry.href,
-        entry.download,
-        entry.downloadUrl,
-        entry.download_url,
-        entry.video,
-        entry.audio
-      );
-
-      if (!fileUrl) return null;
-
-      const type =
-        pick(entry.type, entry.mimeType, entry.mime, entry.format) || "video";
-
-      const extension =
-        pick(entry.extension, entry.ext) || detectExtension(fileUrl, type);
-
-      const quality =
-        pick(
-          entry.quality,
-          entry.resolution,
-          entry.label,
-          entry.name,
-          entry.format_id,
-          entry.format
-        ) || `File ${index + 1}`;
-
-      const size =
-        pick(entry.size, entry.filesize, entry.fileSize, entry.sizeLabel) || "";
-
-      return {
-        id: `${fileUrl}-${index}`,
-        url: fileUrl,
-        type,
-        extension,
-        quality,
-        size,
-      };
-    })
-    .filter(Boolean);
-
-  const uniqueDownloads = Array.from(
-    new Map(mappedDownloads.map((item) => [item.url, item])).values()
-  );
-
-  return {
-    title,
-    author,
-    thumbnail,
-    source,
-    downloads: uniqueDownloads,
-    raw: root,
-  };
+  return { title, author, thumbnail, source, downloads: Array.from(new Map(mappedDownloads.map((item) => [item.url, item])).values()), raw: root };
 }
 
-function validateInputUrl(url) {
-  if (!url.trim()) {
-    throw new Error("Please enter a media URL.");
-  }
-
-  let parsed;
-
-  try {
-    parsed = new URL(url.trim());
-  } catch {
-    throw new Error("The URL format is invalid.");
-  }
-
-  if (parsed.protocol !== "https:") {
-    throw new Error("Please use a secure https:// URL.");
-  }
-
-  return parsed.toString();
-}
-
-function downloadProxyHref(file, title) {
-  const extension = file.extension || "mp4";
-  const name = `${sanitizeClientFileName(title)}-${sanitizeClientFileName(
-    file.quality
-  )}.${extension}`;
-
-  return `/api/file?url=${encodeURIComponent(
-    file.url
-  )}&name=${encodeURIComponent(name)}`;
-}
-
-function MediaIcon({ type }) {
-  const normalized = String(type || "").toLowerCase();
-
-  if (normalized.includes("audio")) {
-    return <Music className="h-4 w-4" />;
-  }
-
-  if (normalized.includes("image")) {
-    return <ImageIcon className="h-4 w-4" />;
-  }
-
-  return <FileVideo className="h-4 w-4" />;
-}
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0 },
-};
+const fadeUp = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } };
 
 export default function Page() {
   const [url, setUrl] = useState("");
@@ -277,312 +131,126 @@ export default function Page() {
   const [errorState, setErrorState] = useState("");
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showQris, setShowQris] = useState(false); // State untuk Modal QRIS
 
-  const canSubmit = useMemo(
-    () => url.trim().length > 0 && !loading,
-    [url, loading]
-  );
+  const canSubmit = useMemo(() => url.trim().length > 0 && !loading, [url, loading]);
 
   async function handleSubmit(event) {
     event.preventDefault();
-
     setErrorState("");
     setResult(null);
-
-    let cleanUrl;
-
     try {
-      cleanUrl = validateInputUrl(url);
-    } catch (error) {
-      toast.error(error.message);
-      setErrorState(error.message);
-      return;
-    }
-
-    try {
+      if (!url.trim()) throw new Error("Masukkan URL media.");
       setLoading(true);
-
       const response = await fetch("/api/download", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ url: cleanUrl }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
       });
-
       const payload = await response.json();
-
-      if (!response.ok || !payload.ok) {
-        throw new Error(payload.message || "Unable to fetch this media.");
-      }
-
+      if (!response.ok || !payload.ok) throw new Error(payload.message || "Gagal mengambil media.");
       const normalized = normalizeApiResponse(payload.data);
-
-      if (!normalized.downloads.length) {
-        throw new Error("Media found, but no direct downloadable link was returned.");
-      }
-
+      if (!normalized.downloads.length) throw new Error("Media ditemukan, tapi tidak ada link unduhan.");
       setResult(normalized);
-      toast.success("Media parsed successfully.");
+      toast.success("Media berhasil diproses.");
     } catch (error) {
-      const message =
-        error.message || "Could not resolve downloadable content for this link.";
-
-      setErrorState(message);
-      toast.error(message);
+      setErrorState(error.message);
+      toast.error(error.message);
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleCopy() {
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      toast.success("Copied to clipboard.");
-      setTimeout(() => setCopied(false), 1200);
-    } catch {
-      toast.error("Failed to copy URL.");
-    }
-  }
-
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#09090b] text-zinc-100">
-      <Toaster
-        richColors
-        theme="dark"
-        position="top-center"
-        toastOptions={{
-          style: {
-            background: "#18181b",
-            border: "1px solid #27272a",
-            color: "#e4e4e7",
-          },
-        }}
-      />
+      <Toaster richColors theme="dark" position="top-center" />
 
-      <section className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6 py-10 sm:px-10 lg:px-12">
-        <motion.nav
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mb-16 flex items-center justify-between border-b border-zinc-800 pb-6"
-        >
+      {/* MODAL QRIS */}
+      <AnimatePresence>
+        {showQris && (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => setShowQris(false)}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-6 backdrop-blur-sm"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative max-w-sm w-full rounded-3xl border border-zinc-800 bg-zinc-900 p-8 text-center shadow-2xl"
+            >
+              <button onClick={() => setShowQris(false)} className="absolute right-4 top-4 text-zinc-500 hover:text-white transition-colors">
+                <X className="h-5 w-5" />
+              </button>
+              <h3 className="text-xl font-bold text-white mb-2">Donasi QRIS</h3>
+              <p className="text-sm text-zinc-500 mb-6">Dukung pengembangan project ini</p>
+              
+              <div className="aspect-square w-full rounded-2xl bg-white p-4 mb-6 shadow-inner">
+                 <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=RanzzDonation" alt="QRIS" className="w-full h-full object-contain" />
+              </div>
+              
+              <p className="text-xs text-zinc-600 italic">Scan menggunakan DANA, GoPay, atau ShopeePay</p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <section className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6 py-10">
+        {/* NAV */}
+        <motion.nav initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-16 flex items-center justify-between border-b border-zinc-800 pb-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100">
-              <ArrowDownToLine className="h-5 w-5 text-zinc-950" />
-            </div>
-
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100"><ArrowDownToLine className="h-5 w-5 text-zinc-950" /></div>
             <div>
-              <p className="text-sm font-bold tracking-wide text-white">
-                Ranzz Downloader
-              </p>
+              <p className="text-sm font-bold text-white">Ranzz Downloader</p>
               <p className="text-xs text-zinc-400">Media Parsing Utility</p>
             </div>
           </div>
-
           <div className="hidden items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/50 px-3 py-1.5 text-xs text-zinc-400 sm:flex">
-            <ShieldCheck className="h-4 w-4 text-zinc-300" />
-            Secure Tunnel
+            <ShieldCheck className="h-4 w-4 text-zinc-300" /> Secure Tunnel
           </div>
         </motion.nav>
 
-        <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col items-center justify-center pb-16 text-center">
-          <motion.div
-            variants={fadeUp}
-            initial="hidden"
-            animate="visible"
-            transition={{ duration: 0.6 }}
-            className="mb-6 inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900 px-4 py-1.5 text-xs font-medium text-zinc-300"
-          >
-            <Sparkles className="h-3.5 w-3.5 text-zinc-100" />
-            Engineered for reliability
-          </motion.div>
-
-          <motion.h1
-            variants={fadeUp}
-            initial="hidden"
-            animate="visible"
-            transition={{ duration: 0.6, delay: 0.05 }}
-            className="max-w-3xl text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl"
-          >
-            Download Social Media.{" "}
-            <span className="text-zinc-500">Professionally.</span>
+        <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col items-center justify-center text-center">
+          <motion.h1 variants={fadeUp} initial="hidden" animate="visible" className="text-4xl font-semibold tracking-tight text-white sm:text-6xl">
+            Download Social Media. <span className="text-zinc-500">Professionally.</span>
           </motion.h1>
 
-          <motion.p
-            variants={fadeUp}
-            initial="hidden"
-            animate="visible"
-            transition={{ duration: 0.6, delay: 0.1 }}
-            className="mt-6 max-w-xl text-base leading-relaxed text-zinc-400 sm:text-lg"
-          >
-            Paste a public link below to parse and retrieve source files. Fast, secure, and completely unbranded processing.
-          </motion.p>
-
-          <motion.form
-            variants={fadeUp}
-            initial="hidden"
-            animate="visible"
-            transition={{ duration: 0.6, delay: 0.15 }}
-            onSubmit={handleSubmit}
-            className="mt-10 w-full max-w-2xl"
-          >
-            <div className="flex flex-col gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-2 sm:flex-row focus-within:border-zinc-600 transition-colors">
-              <div className="flex flex-1 items-center gap-3 rounded-xl px-4 py-3">
-                <Link2 className="h-5 w-5 shrink-0 text-zinc-400" />
-                <input
-                  value={url}
-                  onChange={(event) => setUrl(event.target.value)}
-                  placeholder="Insert https:// URL..."
-                  className="w-full bg-transparent text-sm text-zinc-100 outline-none placeholder:text-zinc-600 sm:text-base"
-                />
-                {url && (
-                  <button
-                    type="button"
-                    onClick={handleCopy}
-                    className="rounded-md p-1.5 text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-200"
-                  >
-                    {copied ? (
-                      <CheckCircle2 className="h-4 w-4" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </button>
-                )}
+          {/* FORM */}
+          <motion.form variants={fadeUp} initial="hidden" animate="visible" transition={{ delay: 0.1 }} onSubmit={handleSubmit} className="mt-10 w-full max-w-2xl">
+            <div className="flex flex-col gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-2 sm:flex-row focus-within:border-zinc-600 transition-all">
+              <div className="flex flex-1 items-center gap-3 px-4 py-3">
+                <Link2 className="h-5 w-5 text-zinc-400" />
+                <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Paste URL here..." className="w-full bg-transparent text-sm outline-none" />
               </div>
-
-              <button
-                type="submit"
-                disabled={!canSubmit}
-                className={cn(
-                  "flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 font-semibold text-zinc-950 transition-all hover:bg-zinc-200",
-                  "disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500"
-                )}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Parsing...
-                  </>
-                ) : (
-                  <>
-                    <ArrowDownToLine className="h-4 w-4" />
-                    Extract
-                  </>
-                )}
+              <button disabled={!canSubmit} className="flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 font-semibold text-zinc-950 transition hover:bg-zinc-200 disabled:bg-zinc-800 disabled:text-zinc-500">
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowDownToLine className="h-4 w-4" />} Extract
               </button>
             </div>
           </motion.form>
 
-          <motion.div
-            variants={fadeUp}
-            initial="hidden"
-            animate="visible"
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="mt-8 flex flex-wrap justify-center gap-3"
-          >
-            {platforms.map((platform) => (
-              <span
-                key={platform}
-                className="text-xs font-medium text-zinc-500"
-              >
-                {platform}
-              </span>
-            ))}
-          </motion.div>
-
-          <AnimatePresence mode="wait">
-            {errorState && !loading && !result && (
-              <motion.div
-                key="error"
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                className="mt-12 w-full rounded-2xl border border-red-900/30 bg-red-950/20 p-6 text-left"
-              >
-                <div className="flex items-center gap-4">
-                  <AlertTriangle className="h-6 w-6 text-red-500" />
-                  <div>
-                    <h3 className="text-sm font-semibold text-red-200">
-                      Extraction Failed
-                    </h3>
-                    <p className="mt-1 text-sm text-red-400/80">
-                      {errorState}
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
+          {/* RESULT AREA */}
+          <AnimatePresence>
             {result && (
-              <motion.div
-                key="result"
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                className="mt-12 w-full"
-              >
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/30 p-2 text-left">
-                  <div className="grid gap-6 rounded-xl bg-zinc-900 p-5 md:grid-cols-[280px_1fr]">
-                    <div className="relative overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">
-                      {result.thumbnail ? (
-                        <img
-                          src={result.thumbnail}
-                          alt={result.title}
-                          className="h-64 w-full object-cover md:h-full"
-                        />
-                      ) : (
-                        <div className="flex h-64 w-full items-center justify-center md:h-full">
-                          <PlayCircle className="h-12 w-12 text-zinc-700" />
-                        </div>
-                      )}
+              <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="mt-12 w-full">
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 grid gap-6 md:grid-cols-[280px_1fr] text-left">
+                  <div className="aspect-video md:aspect-square rounded-lg bg-zinc-950 overflow-hidden">
+                    {result.thumbnail ? <img src={result.thumbnail} className="w-full h-full object-cover" /> : <div className="flex h-full items-center justify-center"><PlayCircle className="h-12 w-12 text-zinc-800" /></div>}
+                  </div>
+                  <div className="flex flex-col justify-between py-1">
+                    <div>
+                      <span className="text-[10px] uppercase tracking-widest font-bold text-zinc-500">{result.source}</span>
+                      <h2 className="text-xl font-bold text-white mt-1 line-clamp-2">{result.title}</h2>
+                      <p className="text-sm text-zinc-400 mt-1">Creator: {result.author}</p>
                     </div>
-
-                    <div className="flex flex-col justify-between py-2">
-                      <div>
-                        <div className="mb-3 flex items-center gap-2">
-                          <span className="rounded-md bg-zinc-800 px-2 py-1 text-xs font-medium text-zinc-300">
-                            {result.source}
-                          </span>
-                          <span className="text-xs text-zinc-500">
-                            {result.downloads.length} format(s) found
-                          </span>
-                        </div>
-
-                        <h2 className="line-clamp-2 text-xl font-semibold text-white">
-                          {result.title}
-                        </h2>
-
-                        <p className="mt-2 text-sm text-zinc-400">
-                          {result.author}
-                        </p>
-                      </div>
-
-                      <div className="mt-6 grid gap-2 sm:grid-cols-2">
-                        {result.downloads.map((file) => (
-                          <a
-                            key={file.id}
-                            href={downloadProxyHref(file, result.title)}
-                            className="group flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/50 p-3 transition hover:border-zinc-600 hover:bg-zinc-800"
-                          >
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2 text-sm font-medium text-zinc-200">
-                                <MediaIcon type={file.type} />
-                                <span className="truncate">
-                                  {file.quality}
-                                </span>
-                              </div>
-                              <p className="mt-1 text-xs text-zinc-500 uppercase">
-                                {file.extension}
-                                {file.size ? ` • ${file.size}` : ""}
-                              </p>
-                            </div>
-
-                            <Download className="h-4 w-4 text-zinc-400 transition group-hover:text-white" />
-                          </a>
-                        ))}
-                      </div>
+                    <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {result.downloads.map((file) => (
+                        <a key={file.id} href={`/api/file?url=${encodeURIComponent(file.url)}&name=${encodeURIComponent(sanitizeClientFileName(result.title) + "." + file.extension)}`} className="flex items-center justify-between p-3 rounded-xl border border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 transition group">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-zinc-200 truncate">{file.quality}</p>
+                            <p className="text-[10px] text-zinc-500 uppercase font-bold">{file.extension} {file.size ? `• ${file.size}` : ""}</p>
+                          </div>
+                          <Download className="h-4 w-4 text-zinc-500 group-hover:text-white transition-colors" />
+                        </a>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -590,70 +258,41 @@ export default function Page() {
             )}
           </AnimatePresence>
 
-          <motion.div
-            variants={fadeUp}
-            initial="hidden"
-            animate="visible"
-            transition={{ duration: 0.6, delay: 0.25 }}
-            className="mt-16 grid w-full gap-4 md:grid-cols-3"
-          >
-            {[
-              {
-                icon: ShieldCheck,
-                title: "Private & Secure",
-                text: "No logs stored. Processing is tunneled through backend.",
-              },
-              {
-                icon: Code2,
-                title: "Clean Code",
-                text: "Built with Next.js App Router for optimal performance.",
-              },
-              {
-                icon: Zap,
-                title: "High Speed",
-                text: "Instant parsing directly from the provider API network.",
-              },
-            ].map((item) => (
-              <div
-                key={item.title}
-                className="rounded-2xl border border-zinc-800 bg-zinc-900/30 p-6 text-left"
-              >
-                <item.icon className="h-5 w-5 text-zinc-400" />
-                <h3 className="mt-4 font-semibold text-zinc-100">{item.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-zinc-500">
-                  {item.text}
-                </p>
-              </div>
-            ))}
-          </motion.div>
-
-          <motion.div
-            variants={fadeUp}
-            initial="hidden"
-            animate="visible"
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="mt-12 w-full rounded-2xl border border-zinc-800 bg-zinc-900/30 p-8 text-left"
-          >
-            <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-zinc-800">
-                  <UserRound className="h-6 w-6 text-zinc-300" />
+          {/* DEVELOPER CARD (RANZZ) */}
+          <motion.div variants={fadeUp} initial="hidden" animate="visible" transition={{ delay: 0.2 }} className="mt-16 w-full rounded-2xl border border-zinc-800 bg-zinc-900/30 p-8 text-left">
+            <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-center gap-5">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-800 shadow-inner">
+                  <UserRound className="h-8 w-8 text-zinc-300" />
                 </div>
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-widest text-zinc-500">
-                    Lead Developer
-                  </p>
-                  <h3 className="mt-1 text-xl font-bold text-white">Ranzz</h3>
-                  <p className="mt-1 text-sm text-zinc-400">
-                    Full-Stack Engineer
-                  </p>
+                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">Lead Developer</p>
+                  <h3 className="mt-1 text-2xl font-bold text-white">Ranzz</h3>
+                  <p className="mt-1 text-sm text-zinc-400">Full-Stack Engineer & UI Designer</p>
                 </div>
+              </div>
+
+              {/* SOCIAL & DONATE BUTTONS */}
+              <div className="flex flex-wrap gap-3">
+                <a href="https://wa.me/628123456789" target="_blank" className="flex h-12 w-12 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/50 text-zinc-400 transition hover:border-green-500/50 hover:text-green-400 hover:bg-green-500/10" title="WhatsApp">
+                  <MessageCircle className="h-5 w-5" />
+                </a>
+                <a href="https://t.me/Ranzz" target="_blank" className="flex h-12 w-12 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/50 text-zinc-400 transition hover:border-sky-500/50 hover:text-sky-400 hover:bg-sky-500/10" title="Telegram">
+                  <Send className="h-5 w-5" />
+                </a>
+                <a href="https://github.com/RamzzzMD" target="_blank" className="flex h-12 w-12 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/50 text-zinc-400 transition hover:border-white/50 hover:text-white hover:bg-white/10" title="GitHub">
+                  <Github className="h-5 w-5" />
+                </a>
+                <button onClick={() => setShowQris(true)} className="flex h-12 items-center gap-3 px-5 rounded-xl border border-zinc-800 bg-zinc-900/50 text-zinc-400 transition hover:border-yellow-500/50 hover:text-yellow-400 hover:bg-yellow-500/10" title="Donasi">
+                  <QrCode className="h-5 w-5" />
+                  <span className="text-xs font-bold uppercase tracking-widest">Donasi</span>
+                </button>
               </div>
             </div>
           </motion.div>
 
-          <footer className="mt-16 w-full border-t border-zinc-800 pt-8 text-center">
-            <p className="text-xs text-zinc-600">
+          <footer className="mt-20 w-full border-t border-zinc-800 pt-8 text-center">
+            <p className="text-[10px] uppercase tracking-widest text-zinc-600 font-bold">
               © {new Date().getFullYear()} Ranzz Downloader. All rights reserved.
             </p>
           </footer>
