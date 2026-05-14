@@ -11,13 +11,8 @@ function sanitizeFileName(name) {
 
 function isPrivateIPv4(hostname) {
   const parts = hostname.split(".").map(Number);
-
-  if (parts.length !== 4 || parts.some((n) => Number.isNaN(n))) {
-    return false;
-  }
-
+  if (parts.length !== 4 || parts.some((n) => Number.isNaN(n))) return false;
   const [a, b] = parts;
-
   return (
     a === 10 ||
     a === 127 ||
@@ -29,32 +24,20 @@ function isPrivateIPv4(hostname) {
 }
 
 function validateTargetUrl(value) {
-  if (!value) {
-    throw new Error("Missing file URL.");
-  }
-
+  if (!value) throw new Error("Missing file URL.");
   let parsed;
-
   try {
     parsed = new URL(value);
   } catch {
     throw new Error("Invalid file URL.");
   }
-
   if (!["http:", "https:"].includes(parsed.protocol)) {
     throw new Error("Unsupported file URL.");
   }
-
   const hostname = parsed.hostname.toLowerCase();
-
-  if (
-    hostname === "localhost" ||
-    hostname.endsWith(".local") ||
-    isPrivateIPv4(hostname)
-  ) {
+  if (hostname === "localhost" || hostname.endsWith(".local") || isPrivateIPv4(hostname)) {
     throw new Error("Blocked unsafe file URL.");
   }
-
   return parsed.toString();
 }
 
@@ -65,26 +48,24 @@ export async function GET(request) {
     const targetUrl = validateTargetUrl(searchParams.get("url"));
     const fileName = sanitizeFileName(searchParams.get("name") || "media");
 
+    // Menambahkan Header manipulasi agar lebih mirip browser sungguhan
     const upstream = await fetch(targetUrl, {
       redirect: "follow",
       headers: {
-        "user-agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "video/webm,video/mp4,video/*,audio/*,*/*",
+        "Referer": "https://www.youtube.com/",
+        "Origin": "https://www.youtube.com"
       },
     });
 
+    // JIKA GAGAL (Contoh: YouTube memblokir IP Server kita dengan 403 Forbidden)
+    // Jangan berikan error JSON. Langsung redirect browser ke URL asli videonya.
     if (!upstream.ok || !upstream.body) {
-      return NextResponse.json(
-        {
-          ok: false,
-          message: "Unable to download this media file.",
-        },
-        { status: 502 },
-      );
+      return NextResponse.redirect(targetUrl, 302);
     }
 
-    const contentType =
-      upstream.headers.get("content-type") || "application/octet-stream";
+    const contentType = upstream.headers.get("content-type") || "application/octet-stream";
 
     return new NextResponse(upstream.body, {
       headers: {
@@ -94,12 +75,10 @@ export async function GET(request) {
       },
     });
   } catch (error) {
+    // Jika ada error fatal (seperti URL tidak valid), kembalikan respon error
     return NextResponse.json(
-      {
-        ok: false,
-        message: error.message || "Download failed.",
-      },
-      { status: 400 },
+      { ok: false, message: error.message || "Download failed." },
+      { status: 400 }
     );
   }
 }
