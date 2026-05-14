@@ -17,14 +17,11 @@ export async function GET(request) {
 
     if (!targetUrl) throw new Error("URL file tidak ditemukan.");
 
-    // KUNCI PERBAIKAN: Gunakan User-Agent Android 15 yang SAMA PERSIS dengan 
-    // scraper downr.org agar signature URL YouTube tidak bocor/diblokir.
     const headers = {
       "user-agent": "Mozilla/5.0 (Linux; Android 15; SM-F958 Build/AP3A.240905.015) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.86 Mobile Safari/537.36",
       "accept": "*/*"
     };
 
-    // Jangan kirim referer Google untuk link YouTube (googlevideo) agar tidak dicurigai
     if (!targetUrl.includes("googlevideo.com")) {
       headers["referer"] = "https://www.google.com/";
     }
@@ -35,9 +32,6 @@ export async function GET(request) {
     });
 
     if (!upstream.ok || !upstream.body) {
-      // FALLBACK: Jika server proxy kita (misal IP Vercel) tetap diblokir oleh YouTube,
-      // alihkan (redirect) pengguna secara paksa agar browser pengguna yang langsung 
-      // mengunduh file dari server googlevideo.
       if (targetUrl.includes("googlevideo.com")) {
          return NextResponse.redirect(targetUrl);
       }
@@ -51,9 +45,16 @@ export async function GET(request) {
     const contentType = upstream.headers.get("content-type") || "application/octet-stream";
     const contentLength = upstream.headers.get("content-length");
 
+    // PERBAIKAN EMOJI: 
+    // 1. Buat nama fallback yang hanya berisi huruf/angka (tanpa emoji) untuk browser lama
+    const safeFallbackName = fileName.replace(/[^\x20-\x7E]/g, "") || "media.mp4";
+    // 2. Encode nama file yang asli (berisi emoji) menggunakan UTF-8
+    const encodedFileName = encodeURIComponent(fileName);
+
     const responseHeaders = {
       "Content-Type": contentType,
-      "Content-Disposition": `attachment; filename="${fileName}"`,
+      // Gunakan filename*=UTF-8'' agar emoji didukung saat didownload
+      "Content-Disposition": `attachment; filename="${safeFallbackName}"; filename*=UTF-8''${encodedFileName}`,
       "Cache-Control": "no-store",
     };
 
