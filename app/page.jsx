@@ -9,10 +9,12 @@ import {
   Clipboard,
   Copy,
   Download,
+  FileVideo,
   HelpCircle,
   Link2,
   Loader2,
   MessageCircle,
+  Music,
   PlayCircle,
   QrCode,
   Send,
@@ -22,6 +24,7 @@ import {
 } from "lucide-react";
 import { Toaster, toast } from "sonner";
 
+// Komponen Ikon GitHub Manual
 function GithubIcon(props) {
   return (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -43,20 +46,17 @@ function sanitizeClientFileName(value) {
 
 function pick(...values) { return values.find((v) => typeof v === "string" && v.trim().length > 0); }
 
-// PERBAIKAN: Deteksi ekstensi yang lebih cerdas untuk Slide IG/TikTok
 function detectExtension(url = "", type = "") {
   const lowerUrl = url.toLowerCase();
   const lowerType = type.toLowerCase();
   
   if (lowerType.includes("audio") || lowerUrl.includes(".mp3") || lowerUrl.includes(".m4a")) return "mp3";
-  // Deteksi format gambar dan parameter khas link slide TikTok (~tplv-)
   if (lowerType.includes("image") || lowerUrl.includes(".jpg") || lowerUrl.includes(".jpeg") || lowerUrl.includes(".png") || lowerUrl.includes(".webp") || lowerUrl.includes("~tplv-")) return "jpg";
   if (lowerUrl.includes(".mov")) return "mov";
   
   return "mp4";
 }
 
-// PERBAIKAN: Penanganan Data API agar bisa membaca Slide dan Audio
 function normalizeApiResponse(apiData) {
   const root = apiData?.data || apiData?.result || apiData || {};
   const title = pick(root.title, root.caption, root.description, root.text) || "Untitled Media";
@@ -64,22 +64,18 @@ function normalizeApiResponse(apiData) {
   const thumbnail = pick(root.thumbnail, root.thumb, root.cover) || "";
   const source = pick(root.source, root.platform) || "Social Media";
   
-  // 1. Ambil array jika itu berupa post Slide/Carousel
   const possibleDownloads = root.images || root.medias || root.media || root.links || root.downloads || [];
   let downloads = Array.isArray(possibleDownloads) && possibleDownloads.length > 0 ? [...possibleDownloads] : [];
 
-  // 2. Jika bukan slide (array kosong), ambil link video reguler
   if (!downloads.length) {
     const direct = [root.url, root.downloadUrl, root.video].filter(Boolean);
     downloads = direct.map((url, i) => ({ url, quality: i === 0 ? "Default" : `Video ${i + 1}` }));
   }
 
-  // 3. Khusus TikTok Slide, biasanya ada audio musik terpisah, kita tambahkan ke daftar!
   if (root.audio && typeof root.audio === "string") {
     downloads.push({ url: root.audio, quality: "Audio/Music", type: "audio" });
   }
 
-  // 4. Petakan (Map) dan tentukan Ekstensi & Label secara otomatis
   const mapped = downloads.map((item, index) => {
     const entry = typeof item === "string" ? { url: item } : item || {};
     const fileUrl = pick(entry.url, entry.link, entry.downloadUrl, entry.src);
@@ -90,10 +86,8 @@ function normalizeApiResponse(apiData) {
     const detectedExt = detectExtension(fileUrl, detectedType);
     let qualityLabel = pick(entry.quality, entry.resolution);
 
-    // Otomatis memberi label "Slide 1, Slide 2" jika itu gambar
     if (!qualityLabel) {
       if (detectedExt === "jpg" || detectedExt === "png" || detectedExt === "webp") {
-        // Jika ada lagu tambahan di akhir (index terakhir beda hitungan), sesuaikan index slide
         qualityLabel = `Slide ${index + 1}`;
       } else if (detectedExt === "mp3") {
         qualityLabel = `Audio ${index + 1}`;
@@ -102,7 +96,7 @@ function normalizeApiResponse(apiData) {
       }
     }
 
-    if (entry.quality === "Audio/Music") qualityLabel = "Audio/Music"; // Override khusus musik
+    if (entry.quality === "Audio/Music") qualityLabel = "Audio/Music";
 
     return {
       id: `${index}-${fileUrl}`,
@@ -113,7 +107,6 @@ function normalizeApiResponse(apiData) {
     };
   }).filter(Boolean);
 
-  // Buang url ganda jika ada
   const uniqueMapped = Array.from(new Map(mapped.map(item => [item.url, item])).values());
 
   return { title, author, thumbnail, source, downloads: uniqueMapped };
@@ -174,10 +167,10 @@ export default function Page() {
         {showQris && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowQris(false)} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
             <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-zinc-900 p-8 rounded-3xl border border-zinc-800 relative max-w-xs w-full text-center">
-              <button onClick={() => setShowQris(false)} className="absolute right-4 top-4 text-zinc-500"><X /></button>
-              <h3 className="font-bold mb-4">Donasi QRIS</h3>
-              <img src="https://raw.githubusercontent.com/kamdjut-ui/uploader/refs/heads/main/uploads/1774444884166_QRIS_(1).jpeg" className="mx-auto rounded-xl mb-4 bg-white p-2" />
-              <p className="text-xs text-zinc-600 italic">Dukungan Anda sangat berarti.</p>
+              <button onClick={() => setShowQris(false)} className="absolute right-4 top-4 text-zinc-500 hover:text-white transition-colors"><X /></button>
+              <h3 className="font-bold mb-4 text-white">Donasi QRIS</h3>
+              <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=RanzzDonation" className="mx-auto rounded-xl mb-4 bg-white p-2 shadow-inner" />
+              <p className="text-xs text-zinc-500 italic">Dukungan Anda sangat berarti.</p>
             </motion.div>
           </motion.div>
         )}
@@ -191,19 +184,20 @@ export default function Page() {
         </nav>
 
         <div className="text-center flex-1">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">
-            Download <span className="text-zinc-500">all</span> Social Media.
+          <h1 className="text-4xl md:text-6xl font-bold mb-6 tracking-tight text-white">
+            Download <span className="text-zinc-500">ALL</span> Social Media.
           </h1>
           
+          {/* Form Input */}
           <form onSubmit={handleSubmit} className="mb-12">
-            <div className="bg-zinc-900/50 border border-zinc-800 p-2 rounded-2xl flex flex-col sm:flex-row gap-2">
-              <div className="flex flex-1 items-center gap-2 bg-transparent px-2">
-                <Link2 className="text-zinc-400 shrink-0" size={18} />
+            <div className="bg-zinc-900/50 border border-zinc-800 p-2 rounded-2xl flex flex-col sm:flex-row gap-2 transition-colors focus-within:border-zinc-600">
+              <div className="flex flex-1 items-center gap-2 bg-transparent px-3">
+                <Link2 className="text-zinc-400 shrink-0" size={20} />
                 <input 
                   value={url} 
                   onChange={(e)=>setUrl(e.target.value)} 
                   placeholder="Paste URL here..." 
-                  className="bg-transparent flex-1 py-3 outline-none text-sm" 
+                  className="bg-transparent flex-1 py-3 outline-none text-sm md:text-base text-zinc-100 placeholder:text-zinc-600" 
                 />
                 
                 <button type="button" onClick={handlePaste} className="p-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg transition" title="Tempel URL">
@@ -226,75 +220,122 @@ export default function Page() {
                 )}
               </div>
               
-              <button disabled={loading} className="bg-white text-zinc-950 px-6 py-3 rounded-xl font-bold hover:bg-zinc-200 transition disabled:opacity-50">
-                {loading ? <Loader2 className="animate-spin inline mr-2" size={18}/> : "Extract"}
+              <button disabled={loading} className="bg-white text-zinc-950 px-8 py-3 rounded-xl font-bold hover:bg-zinc-200 transition disabled:opacity-50">
+                {loading ? <Loader2 className="animate-spin inline" size={20}/> : "Extract"}
               </button>
             </div>
           </form>
 
-          {/* Result Card */}
+          {/* Result Card (Gallery Grid Mode) */}
           <AnimatePresence>
             {result && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl text-left grid md:grid-cols-[250px_1fr] gap-6 mb-12">
-                <div className="bg-zinc-950 aspect-square rounded-xl overflow-hidden">
-                  {result.thumbnail ? <img src={result.thumbnail} className="w-full h-full object-cover" /> : <div className="h-full flex items-center justify-center"><PlayCircle size={48} className="text-zinc-800"/></div>}
-                </div>
-                <div className="flex flex-col justify-between">
+              <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="bg-zinc-900 border border-zinc-800 p-5 sm:p-7 rounded-3xl text-left mb-12 shadow-2xl">
+                
+                {/* Bagian Header Media */}
+                <div className="flex items-center gap-5 mb-6 pb-6 border-b border-zinc-800">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-zinc-950 rounded-2xl overflow-hidden shrink-0 border border-zinc-800 shadow-inner">
+                    {result.thumbnail ? (
+                      <img src={result.thumbnail} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                    ) : (
+                      <PlayCircle className="m-auto mt-5 sm:mt-7 text-zinc-700" />
+                    )}
+                  </div>
                   <div>
-                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">{result.source}</span>
-                    <h2 className="text-xl font-bold line-clamp-2 mt-1">{result.title}</h2>
-                    <p className="text-sm text-zinc-500">{result.author}</p>
-                  </div>
-                  {/* Grid ini akan scroll otomatis jika slide banyak */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-6 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                    {result.downloads.map((file, i) => (
-                      <button key={i} onClick={() => handleDownloadNative(file.url, sanitizeClientFileName(result.title) + "." + file.extension)} className="flex justify-between items-center p-3 border border-zinc-800 rounded-xl hover:bg-zinc-800 transition group text-left">
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{file.quality}</p>
-                          <p className="text-[10px] text-zinc-500 uppercase">{file.extension} {file.size}</p>
-                        </div>
-                        <Download size={16} className="text-zinc-500 group-hover:text-white" />
-                      </button>
-                    ))}
+                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest bg-zinc-800/50 border border-zinc-700/50 px-2.5 py-1 rounded-md">{result.source}</span>
+                    <h2 className="text-lg sm:text-2xl font-bold line-clamp-2 mt-2.5 text-white">{result.title}</h2>
+                    <p className="text-xs sm:text-sm text-zinc-500 mt-1.5">Kreator: <span className="text-zinc-300 font-medium">{result.author}</span></p>
                   </div>
                 </div>
+
+                {/* Bagian Grid Galeri */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                  {result.downloads.map((file, i) => {
+                    const isImage = file.extension === 'jpg' || file.extension === 'png' || file.extension === 'webp';
+                    const isVideo = file.extension === 'mp4' || file.extension === 'mov';
+                    const isAudio = file.extension === 'mp3' || file.extension === 'm4a';
+
+                    // Gunakan gambar aslinya jika itu slide foto, atau thumbnail jika itu video
+                    const previewSrc = isImage ? file.url : (isVideo ? result.thumbnail : null);
+                    // Nama file unik per item
+                    const safeFileName = `${sanitizeClientFileName(result.title)}-${sanitizeClientFileName(file.quality)}.${file.extension}`;
+
+                    return (
+                      <div key={file.id} className="group relative rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 aspect-[3/4] flex flex-col shadow-lg">
+                        
+                        {/* Area Thumbnail */}
+                        <div className="flex-1 relative w-full h-full bg-zinc-900 flex items-center justify-center overflow-hidden">
+                          {previewSrc ? (
+                            <img src={previewSrc} referrerPolicy="no-referrer" alt={file.quality} className="w-full h-full object-cover transition duration-500 group-hover:scale-110 group-hover:opacity-60" />
+                          ) : (
+                            isAudio ? <Music size={32} className="text-zinc-700" /> : <FileVideo size={32} className="text-zinc-700" />
+                          )}
+                          
+                          {/* Gradient pelindung agar teks terbaca */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/20 to-transparent opacity-90 pointer-events-none" />
+                          
+                          {/* Label Kualitas/Slide */}
+                          <div className="absolute top-3 left-3 px-2.5 py-1 bg-black/60 backdrop-blur-md border border-white/10 rounded-lg text-[10px] font-bold uppercase text-zinc-200 shadow-xl pointer-events-none">
+                            {file.quality}
+                          </div>
+                        </div>
+
+                        {/* Area Aksi Tombol */}
+                        <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 flex justify-between items-end pointer-events-none">
+                          <div className="min-w-0 pr-2">
+                            <p className="text-[10px] text-zinc-400 uppercase font-bold tracking-wider">{file.extension} {file.size ? `• ${file.size}` : ""}</p>
+                          </div>
+                          
+                          <button 
+                            onClick={() => handleDownloadNative(file.url, safeFileName)} 
+                            className="w-10 h-10 flex items-center justify-center bg-white text-zinc-950 rounded-full hover:scale-110 hover:bg-zinc-200 transition-all shadow-xl pointer-events-auto"
+                            title={`Download ${file.quality}`}
+                          >
+                            <Download size={18} />
+                          </button>
+                        </div>
+
+                      </div>
+                    )
+                  })}
+                </div>
+
               </motion.div>
             )}
           </AnimatePresence>
 
           {/* Dev Card */}
-          <div className="bg-zinc-900/30 border border-zinc-800 p-8 rounded-2xl text-left flex flex-col md:flex-row justify-between items-center gap-6 mb-16">
-            <div className="flex gap-4 items-center">
-              <div className="w-14 h-14 bg-zinc-800 rounded-xl flex items-center justify-center"><UserRound className="text-zinc-400"/></div>
+          <div className="bg-zinc-900/30 border border-zinc-800 p-6 sm:p-8 rounded-3xl text-left flex flex-col md:flex-row justify-between items-center gap-6 mb-16">
+            <div className="flex gap-5 items-center">
+              <div className="w-16 h-16 bg-zinc-800 rounded-2xl flex items-center justify-center shadow-inner"><UserRound size={28} className="text-zinc-400"/></div>
               <div>
-                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Developer</p>
-                <h3 className="text-xl font-bold">Ranzz</h3>
-                <p className="text-xs text-zinc-500">Full-Stack Engineer</p>
+                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Lead Developer</p>
+                <h3 className="text-xl font-bold text-white mt-1">Ranzz</h3>
+                <p className="text-xs text-zinc-400 mt-1">Full-Stack Engineer</p>
               </div>
             </div>
-            <div className="flex gap-2">
-              <a href="https://wa.me/6281214300828" className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl hover:text-green-400"><MessageCircle size={20}/></a>
-              <a href="https://t.me/cangcuthideung" className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl hover:text-sky-400"><Send size={20}/></a>
-              <a href="https://github.com/RamzzzMD" className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl hover:text-white"><GithubIcon size={20}/></a>
-              <button onClick={()=>setShowQris(true)} className="flex items-center gap-2 px-4 bg-zinc-900 border border-zinc-800 rounded-xl hover:text-yellow-400"><QrCode size={20}/> Donasi</button>
+            <div className="flex flex-wrap justify-center gap-3">
+              <a href="https://wa.me/628123456789" className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl hover:text-green-400 hover:border-green-500/50 transition-colors"><MessageCircle size={20}/></a>
+              <a href="https://t.me/Ranzz" className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl hover:text-sky-400 hover:border-sky-500/50 transition-colors"><Send size={20}/></a>
+              <a href="https://github.com/RamzzzMD" className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl hover:text-white hover:border-white/50 transition-colors"><GithubIcon size={20}/></a>
+              <button onClick={()=>setShowQris(true)} className="flex items-center gap-2 px-5 bg-zinc-900 border border-zinc-800 rounded-xl hover:text-yellow-400 hover:border-yellow-500/50 transition-colors"><QrCode size={20}/> <span className="text-xs font-bold uppercase tracking-widest">Donasi</span></button>
             </div>
           </div>
 
           {/* FAQ Section */}
           <section className="text-left mb-16">
-            <h2 className="text-2xl font-bold mb-6 flex items-center gap-2"><HelpCircle/> Pertanyaan Umum</h2>
+            <h2 className="text-2xl font-bold mb-6 flex items-center gap-3 text-white"><HelpCircle className="text-zinc-500" /> Pertanyaan Umum</h2>
             <div className="grid gap-3">
               {faqs.map((faq, i) => (
-                <div key={i} className="p-5 border border-zinc-800 rounded-xl bg-zinc-900/20">
-                  <h4 className="font-bold text-zinc-200">{faq.question}</h4>
-                  <p className="text-sm text-zinc-500 mt-1">{faq.answer}</p>
+                <div key={i} className="p-5 sm:p-6 border border-zinc-800 rounded-2xl bg-zinc-900/30 hover:bg-zinc-900/50 transition-colors">
+                  <h4 className="font-semibold text-zinc-200 text-base">{faq.question}</h4>
+                  <p className="text-sm text-zinc-400 mt-2 leading-relaxed">{faq.answer}</p>
                 </div>
               ))}
             </div>
           </section>
 
           <footer className="border-t border-zinc-800 pt-8 pb-10">
-            <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">© 2026 Ranzz Downloader. All rights reserved.</p>
+            <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">© {new Date().getFullYear()} Ranzz Downloader. All rights reserved.</p>
           </footer>
         </div>
       </div>
