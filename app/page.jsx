@@ -39,27 +39,27 @@ const faqs = [
   {
     question: "What is Ranzz Downloader?",
     answer:
-      "Ranzz Downloader is an all-in-one social media downloader with premium dark UI, smooth animations, and secure backend API integration.",
+      "A professional, all-in-one social media downloader featuring a clean user interface and secure backend processing.",
   },
   {
     question: "Which platforms are supported?",
     answer:
-      "The app is designed to support TikTok, Instagram, Facebook, X/Twitter, YouTube, Pinterest, Threads, and other platforms depending on API support.",
+      "The app supports TikTok, Instagram, Facebook, X/Twitter, YouTube, Pinterest, Threads, and more depending on availability.",
   },
   {
-    question: "Is my API key safe?",
+    question: "Is it secure?",
     answer:
-      "Yes. The RapidAPI key is stored inside the backend environment variable, so it is never exposed directly to the browser.",
+      "Yes. All processing is handled securely on the server side without exposing any sensitive configuration to the browser.",
   },
   {
     question: "Why does some media fail to download?",
     answer:
-      "Some videos may be private, deleted, region-restricted, or unsupported by the third-party API provider.",
+      "Some videos may be private, deleted, region-restricted, or simply unsupported by the current media resolution provider.",
   },
   {
     question: "Who is the developer?",
     answer:
-      "This application was developed by Ranzz, focused on modern full-stack web development and premium UI/UX design.",
+      "This application is engineered by Ranzz, specializing in modern full-stack web architecture and minimalist UI/UX design.",
   },
 ];
 
@@ -69,7 +69,7 @@ function cn(...classes) {
 
 function pick(...values) {
   return values.find(
-    (value) => typeof value === "string" && value.trim().length > 0,
+    (value) => typeof value === "string" && value.trim().length > 0
   );
 }
 
@@ -107,8 +107,8 @@ function normalizeApiResponse(apiData) {
       root.description,
       root.text,
       root.name,
-      root.fulltitle,
-    ) || "Untitled media";
+      root.fulltitle
+    ) || "Untitled Media";
 
   const author =
     pick(
@@ -117,8 +117,8 @@ function normalizeApiResponse(apiData) {
       root.username,
       root.user,
       root.channel,
-      root.creator,
-    ) || "Unknown creator";
+      root.creator
+    ) || "Unknown Creator";
 
   const thumbnail =
     pick(
@@ -127,12 +127,12 @@ function normalizeApiResponse(apiData) {
       root.cover,
       root.image,
       root.preview,
-      root.poster,
+      root.poster
     ) || "";
 
   const source =
     pick(root.source, root.platform, root.extractor, root.service) ||
-    "Social media";
+    "Social Platform";
 
   const possibleDownloads =
     root.medias ||
@@ -172,7 +172,7 @@ function normalizeApiResponse(apiData) {
         entry.downloadUrl,
         entry.download_url,
         entry.video,
-        entry.audio,
+        entry.audio
       );
 
       if (!fileUrl) return null;
@@ -190,8 +190,8 @@ function normalizeApiResponse(apiData) {
           entry.label,
           entry.name,
           entry.format_id,
-          entry.format,
-        ) || `Media ${index + 1}`;
+          entry.format
+        ) || `File ${index + 1}`;
 
       const size =
         pick(entry.size, entry.filesize, entry.fileSize, entry.sizeLabel) || "";
@@ -208,7 +208,7 @@ function normalizeApiResponse(apiData) {
     .filter(Boolean);
 
   const uniqueDownloads = Array.from(
-    new Map(mappedDownloads.map((item) => [item.url, item])).values(),
+    new Map(mappedDownloads.map((item) => [item.url, item])).values()
   );
 
   return {
@@ -223,7 +223,7 @@ function normalizeApiResponse(apiData) {
 
 function validateInputUrl(url) {
   if (!url.trim()) {
-    throw new Error("Paste a social media URL first.");
+    throw new Error("Please enter a media URL.");
   }
 
   let parsed;
@@ -231,11 +231,11 @@ function validateInputUrl(url) {
   try {
     parsed = new URL(url.trim());
   } catch {
-    throw new Error("That URL does not look valid.");
+    throw new Error("The URL format is invalid.");
   }
 
   if (parsed.protocol !== "https:") {
-    throw new Error("Please use a valid https:// URL.");
+    throw new Error("Please use a secure https:// URL.");
   }
 
   return parsed.toString();
@@ -243,13 +243,12 @@ function validateInputUrl(url) {
 
 function downloadProxyHref(file, title) {
   const extension = file.extension || "mp4";
-
   const name = `${sanitizeClientFileName(title)}-${sanitizeClientFileName(
-    file.quality,
+    file.quality
   )}.${extension}`;
 
   return `/api/file?url=${encodeURIComponent(
-    file.url,
+    file.url
   )}&name=${encodeURIComponent(name)}`;
 }
 
@@ -268,7 +267,7 @@ function MediaIcon({ type }) {
 }
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 24 },
+  hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0 },
 };
 
@@ -281,7 +280,7 @@ export default function Page() {
 
   const canSubmit = useMemo(
     () => url.trim().length > 0 && !loading,
-    [url, loading],
+    [url, loading]
   );
 
   async function handleSubmit(event) {
@@ -320,16 +319,14 @@ export default function Page() {
       const normalized = normalizeApiResponse(payload.data);
 
       if (!normalized.downloads.length) {
-        throw new Error(
-          "Media was found, but no downloadable file was returned.",
-        );
+        throw new Error("Media found, but no direct downloadable link was returned.");
       }
 
       setResult(normalized);
-      toast.success("Media fetched successfully.");
+      toast.success("Media parsed successfully.");
     } catch (error) {
       const message =
-        error.message || "We could not find downloadable media for this link.";
+        error.message || "Could not resolve downloadable content for this link.";
 
       setErrorState(message);
       toast.error(message);
@@ -342,159 +339,139 @@ export default function Page() {
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
-      toast.success("URL copied.");
+      toast.success("Copied to clipboard.");
       setTimeout(() => setCopied(false), 1200);
     } catch {
-      toast.error("Could not copy URL.");
+      toast.error("Failed to copy URL.");
     }
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#020617] text-white">
+    <main className="relative min-h-screen overflow-hidden bg-[#09090b] text-zinc-100">
       <Toaster
         richColors
         theme="dark"
         position="top-center"
         toastOptions={{
           style: {
-            background: "rgba(15, 23, 42, 0.9)",
-            border: "1px solid rgba(148, 163, 184, 0.2)",
-            backdropFilter: "blur(18px)",
+            background: "#18181b",
+            border: "1px solid #27272a",
+            color: "#e4e4e7",
           },
         }}
       />
 
-      <div className="pointer-events-none absolute inset-0 bg-grid opacity-30" />
-      <div className="pointer-events-none absolute left-1/2 top-0 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-cyan-500/20 blur-[120px]" />
-      <div className="pointer-events-none absolute bottom-0 right-0 h-[420px] w-[420px] rounded-full bg-purple-500/20 blur-[120px]" />
-      <div className="pointer-events-none absolute left-0 top-1/3 h-[360px] w-[360px] rounded-full bg-fuchsia-500/10 blur-[110px]" />
-
-      <section className="relative mx-auto flex min-h-screen w-full max-w-7xl flex-col px-5 py-8 sm:px-8 lg:px-10">
+      <section className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6 py-10 sm:px-10 lg:px-12">
         <motion.nav
-          initial={{ opacity: 0, y: -14 }}
+          initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="mb-12 flex items-center justify-between"
+          transition={{ duration: 0.5 }}
+          className="mb-16 flex items-center justify-between border-b border-zinc-800 pb-6"
         >
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-400/10 shadow-[0_0_35px_rgba(34,211,238,0.25)]">
-              <ArrowDownToLine className="h-5 w-5 text-cyan-300" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100">
+              <ArrowDownToLine className="h-5 w-5 text-zinc-950" />
             </div>
 
             <div>
-              <p className="text-sm font-semibold tracking-wide text-white">
+              <p className="text-sm font-bold tracking-wide text-white">
                 Ranzz Downloader
               </p>
-              <p className="text-xs text-slate-400">All-in-one media fetcher</p>
+              <p className="text-xs text-zinc-400">Media Parsing Utility</p>
             </div>
           </div>
 
-          <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-xs text-slate-300 backdrop-blur-xl sm:flex">
-            <ShieldCheck className="h-4 w-4 text-emerald-300" />
-            API key protected
+          <div className="hidden items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/50 px-3 py-1.5 text-xs text-zinc-400 sm:flex">
+            <ShieldCheck className="h-4 w-4 text-zinc-300" />
+            Secure Tunnel
           </div>
         </motion.nav>
 
-        <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col items-center justify-center pb-14 text-center">
+        <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col items-center justify-center pb-16 text-center">
           <motion.div
             variants={fadeUp}
             initial="hidden"
             animate="visible"
-            transition={{ duration: 0.65 }}
-            className="mb-5 inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-sm text-cyan-100 shadow-[0_0_50px_rgba(34,211,238,0.12)] backdrop-blur-xl"
+            transition={{ duration: 0.6 }}
+            className="mb-6 inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900 px-4 py-1.5 text-xs font-medium text-zinc-300"
           >
-            <Sparkles className="h-4 w-4 text-cyan-300" />
-            Premium downloader experience
+            <Sparkles className="h-3.5 w-3.5 text-zinc-100" />
+            Engineered for reliability
           </motion.div>
 
           <motion.h1
             variants={fadeUp}
             initial="hidden"
             animate="visible"
-            transition={{ duration: 0.75, delay: 0.05 }}
-            className="max-w-5xl bg-gradient-to-b from-white via-slate-100 to-slate-400 bg-clip-text text-5xl font-black tracking-tight text-transparent sm:text-6xl lg:text-7xl"
+            transition={{ duration: 0.6, delay: 0.05 }}
+            className="max-w-3xl text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl"
           >
-            Download Social Media Content With{" "}
-            <span className="bg-gradient-to-r from-cyan-300 via-purple-300 to-fuchsia-300 bg-clip-text text-transparent">
-              Neon Speed
-            </span>
+            Download Social Media.{" "}
+            <span className="text-zinc-500">Professionally.</span>
           </motion.h1>
 
           <motion.p
             variants={fadeUp}
             initial="hidden"
             animate="visible"
-            transition={{ duration: 0.75, delay: 0.12 }}
-            className="mt-6 max-w-2xl text-base leading-8 text-slate-400 sm:text-lg"
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="mt-6 max-w-xl text-base leading-relaxed text-zinc-400 sm:text-lg"
           >
-            Paste a public video or media link, fetch the result securely from
-            your backend, then download available qualities from a sleek
-            glassmorphism result card.
+            Paste a public link below to parse and retrieve source files. Fast, secure, and completely unbranded processing.
           </motion.p>
 
           <motion.form
             variants={fadeUp}
             initial="hidden"
             animate="visible"
-            transition={{ duration: 0.75, delay: 0.18 }}
+            transition={{ duration: 0.6, delay: 0.15 }}
             onSubmit={handleSubmit}
-            className="mt-10 w-full max-w-4xl"
+            className="mt-10 w-full max-w-2xl"
           >
-            <div className="group rounded-[2rem] border border-white/10 bg-white/[0.04] p-2 shadow-2xl shadow-cyan-950/30 backdrop-blur-2xl transition duration-300 focus-within:border-cyan-300/50 focus-within:shadow-[0_0_70px_rgba(34,211,238,0.2)]">
-              <div className="flex flex-col gap-3 rounded-[1.5rem] bg-slate-950/70 p-3 sm:flex-row">
-                <div className="flex flex-1 items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 text-left transition focus-within:border-cyan-300/40">
-                  <Link2 className="h-5 w-5 shrink-0 text-cyan-300" />
-
-                  <input
-                    value={url}
-                    onChange={(event) => setUrl(event.target.value)}
-                    placeholder="Paste https:// social media URL here..."
-                    className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-500 sm:text-base"
-                  />
-
-                  {url && (
-                    <button
-                      type="button"
-                      onClick={handleCopy}
-                      className="rounded-xl p-2 text-slate-400 transition hover:bg-white/10 hover:text-white"
-                      aria-label="Copy URL"
-                    >
-                      {copied ? (
-                        <CheckCircle2 className="h-4 w-4 text-emerald-300" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
-                    </button>
-                  )}
-                </div>
-
-                <motion.button
-                  type="submit"
-                  disabled={!canSubmit}
-                  whileHover={canSubmit ? { scale: 1.02 } : undefined}
-                  whileTap={canSubmit ? { scale: 0.97 } : undefined}
-                  className={cn(
-                    "relative overflow-hidden rounded-2xl px-7 py-4 font-bold text-slate-950 transition",
-                    "bg-gradient-to-r from-cyan-300 via-sky-300 to-purple-300",
-                    "shadow-[0_0_45px_rgba(34,211,238,0.28)]",
-                    "disabled:cursor-not-allowed disabled:opacity-50",
-                  )}
-                >
-                  <span className="relative z-10 flex items-center justify-center gap-2">
-                    {loading ? (
-                      <>
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                        Fetching magic...
-                      </>
+            <div className="flex flex-col gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-2 sm:flex-row focus-within:border-zinc-600 transition-colors">
+              <div className="flex flex-1 items-center gap-3 rounded-xl px-4 py-3">
+                <Link2 className="h-5 w-5 shrink-0 text-zinc-400" />
+                <input
+                  value={url}
+                  onChange={(event) => setUrl(event.target.value)}
+                  placeholder="Insert https:// URL..."
+                  className="w-full bg-transparent text-sm text-zinc-100 outline-none placeholder:text-zinc-600 sm:text-base"
+                />
+                {url && (
+                  <button
+                    type="button"
+                    onClick={handleCopy}
+                    className="rounded-md p-1.5 text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-200"
+                  >
+                    {copied ? (
+                      <CheckCircle2 className="h-4 w-4" />
                     ) : (
-                      <>
-                        <Wand2 className="h-5 w-5" />
-                        Fetch
-                      </>
+                      <Copy className="h-4 w-4" />
                     )}
-                  </span>
-                </motion.button>
+                  </button>
+                )}
               </div>
+
+              <button
+                type="submit"
+                disabled={!canSubmit}
+                className={cn(
+                  "flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 font-semibold text-zinc-950 transition-all hover:bg-zinc-200",
+                  "disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500"
+                )}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Parsing...
+                  </>
+                ) : (
+                  <>
+                    <ArrowDownToLine className="h-4 w-4" />
+                    Extract
+                  </>
+                )}
+              </button>
             </div>
           </motion.form>
 
@@ -502,13 +479,13 @@ export default function Page() {
             variants={fadeUp}
             initial="hidden"
             animate="visible"
-            transition={{ duration: 0.75, delay: 0.24 }}
-            className="mt-6 flex flex-wrap justify-center gap-2"
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="mt-8 flex flex-wrap justify-center gap-3"
           >
             {platforms.map((platform) => (
               <span
                 key={platform}
-                className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-slate-400 backdrop-blur-xl"
+                className="text-xs font-medium text-zinc-500"
               >
                 {platform}
               </span>
@@ -519,24 +496,19 @@ export default function Page() {
             {errorState && !loading && !result && (
               <motion.div
                 key="error"
-                initial={{ opacity: 0, y: 24, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 12, scale: 0.98 }}
-                transition={{ duration: 0.35 }}
-                className="mt-10 w-full max-w-3xl rounded-[2rem] border border-rose-300/15 bg-rose-400/[0.06] p-8 text-left shadow-2xl shadow-rose-950/20 backdrop-blur-2xl"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="mt-12 w-full rounded-2xl border border-red-900/30 bg-red-950/20 p-6 text-left"
               >
-                <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl border border-rose-300/20 bg-rose-300/10">
-                    <AlertTriangle className="h-8 w-8 text-rose-300" />
-                  </div>
-
+                <div className="flex items-center gap-4">
+                  <AlertTriangle className="h-6 w-6 text-red-500" />
                   <div>
-                    <h3 className="text-xl font-bold text-white">
-                      Media Not Found
+                    <h3 className="text-sm font-semibold text-red-200">
+                      Extraction Failed
                     </h3>
-                    <p className="mt-2 text-sm leading-7 text-slate-400">
-                      {errorState} Try another public link or make sure the URL
-                      is accessible.
+                    <p className="mt-1 text-sm text-red-400/80">
+                      {errorState}
                     </p>
                   </div>
                 </div>
@@ -546,105 +518,71 @@ export default function Page() {
             {result && (
               <motion.div
                 key="result"
-                initial={{ opacity: 0, y: 28, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 16, scale: 0.98 }}
-                transition={{ duration: 0.45 }}
-                className="mt-12 w-full max-w-5xl"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="mt-12 w-full"
               >
-                <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.05] p-3 text-left shadow-2xl shadow-cyan-950/30 backdrop-blur-2xl">
-                  <div className="grid gap-5 rounded-[1.5rem] bg-slate-950/70 p-4 md:grid-cols-[320px_1fr]">
-                    <div className="relative overflow-hidden rounded-[1.4rem] border border-white/10 bg-slate-900">
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/30 p-2 text-left">
+                  <div className="grid gap-6 rounded-xl bg-zinc-900 p-5 md:grid-cols-[280px_1fr]">
+                    <div className="relative overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">
                       {result.thumbnail ? (
                         <img
                           src={result.thumbnail}
                           alt={result.title}
-                          className="h-72 w-full object-cover md:h-full"
+                          className="h-64 w-full object-cover md:h-full"
                         />
                       ) : (
-                        <div className="flex h-72 w-full items-center justify-center md:h-full">
-                          <PlayCircle className="h-20 w-20 text-slate-700" />
+                        <div className="flex h-64 w-full items-center justify-center md:h-full">
+                          <PlayCircle className="h-12 w-12 text-zinc-700" />
                         </div>
                       )}
-
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-
-                      <div className="absolute bottom-4 left-4 rounded-full border border-white/10 bg-black/40 px-3 py-1.5 text-xs text-slate-200 backdrop-blur-xl">
-                        {result.source}
-                      </div>
                     </div>
 
-                    <div className="flex flex-col justify-between p-2 sm:p-4">
+                    <div className="flex flex-col justify-between py-2">
                       <div>
-                        <div className="mb-4 flex flex-wrap items-center gap-2">
-                          <span className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1.5 text-xs font-medium text-cyan-100">
-                            <Zap className="h-3.5 w-3.5 text-cyan-300" />
-                            Ready to download
+                        <div className="mb-3 flex items-center gap-2">
+                          <span className="rounded-md bg-zinc-800 px-2 py-1 text-xs font-medium text-zinc-300">
+                            {result.source}
                           </span>
-
-                          <span className="inline-flex items-center gap-2 rounded-full border border-purple-300/20 bg-purple-300/10 px-3 py-1.5 text-xs font-medium text-purple-100">
-                            <Globe2 className="h-3.5 w-3.5 text-purple-300" />
-                            {result.downloads.length} file
-                            {result.downloads.length > 1 ? "s" : ""}
+                          <span className="text-xs text-zinc-500">
+                            {result.downloads.length} format(s) found
                           </span>
                         </div>
 
-                        <h2 className="line-clamp-2 text-2xl font-black tracking-tight text-white sm:text-3xl">
+                        <h2 className="line-clamp-2 text-xl font-semibold text-white">
                           {result.title}
                         </h2>
 
-                        <p className="mt-3 text-sm text-slate-400">
-                          By{" "}
-                          <span className="font-semibold text-slate-200">
-                            {result.author}
-                          </span>
+                        <p className="mt-2 text-sm text-zinc-400">
+                          {result.author}
                         </p>
                       </div>
 
-                      <motion.div
-                        initial="hidden"
-                        animate="visible"
-                        variants={{
-                          hidden: {},
-                          visible: {
-                            transition: {
-                              staggerChildren: 0.08,
-                            },
-                          },
-                        }}
-                        className="mt-8 grid gap-3 sm:grid-cols-2"
-                      >
+                      <div className="mt-6 grid gap-2 sm:grid-cols-2">
                         {result.downloads.map((file) => (
-                          <motion.a
+                          <a
                             key={file.id}
-                            variants={fadeUp}
                             href={downloadProxyHref(file, result.title)}
-                            whileHover={{ scale: 1.025 }}
-                            whileTap={{ scale: 0.98 }}
-                            className="group rounded-2xl border border-white/10 bg-white/[0.04] p-4 transition hover:border-cyan-300/40 hover:bg-cyan-300/10 hover:shadow-[0_0_35px_rgba(34,211,238,0.14)]"
+                            className="group flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/50 p-3 transition hover:border-zinc-600 hover:bg-zinc-800"
                           >
-                            <div className="flex items-center justify-between gap-4">
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2 text-sm font-bold text-white">
-                                  <MediaIcon type={file.type} />
-                                  <span className="truncate">
-                                    {file.quality}
-                                  </span>
-                                </div>
-
-                                <p className="mt-1 text-xs uppercase tracking-wider text-slate-500">
-                                  {file.extension}
-                                  {file.size ? ` • ${file.size}` : ""}
-                                </p>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 text-sm font-medium text-zinc-200">
+                                <MediaIcon type={file.type} />
+                                <span className="truncate">
+                                  {file.quality}
+                                </span>
                               </div>
-
-                              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-cyan-300 text-slate-950 transition group-hover:rotate-3 group-hover:scale-105">
-                                <Download className="h-5 w-5" />
-                              </div>
+                              <p className="mt-1 text-xs text-zinc-500 uppercase">
+                                {file.extension}
+                                {file.size ? ` • ${file.size}` : ""}
+                              </p>
                             </div>
-                          </motion.a>
+
+                            <Download className="h-4 w-4 text-zinc-400 transition group-hover:text-white" />
+                          </a>
                         ))}
-                      </motion.div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -656,33 +594,33 @@ export default function Page() {
             variants={fadeUp}
             initial="hidden"
             animate="visible"
-            transition={{ duration: 0.75, delay: 0.3 }}
-            className="mt-14 grid w-full max-w-5xl gap-4 md:grid-cols-3"
+            transition={{ duration: 0.6, delay: 0.25 }}
+            className="mt-16 grid w-full gap-4 md:grid-cols-3"
           >
             {[
               {
                 icon: ShieldCheck,
-                title: "Secure API Layer",
-                text: "RapidAPI requests stay inside your Next.js backend.",
+                title: "Private & Secure",
+                text: "No logs stored. Processing is tunneled through backend.",
               },
               {
-                icon: Sparkles,
-                title: "Premium UI",
-                text: "Dark glassmorphism layout with neon hover states.",
+                icon: Code2,
+                title: "Clean Code",
+                text: "Built with Next.js App Router for optimal performance.",
               },
               {
                 icon: Zap,
-                title: "Fast UX",
-                text: "Smooth loading, toast errors, and animated results.",
+                title: "High Speed",
+                text: "Instant parsing directly from the provider API network.",
               },
             ].map((item) => (
               <div
                 key={item.title}
-                className="rounded-3xl border border-white/10 bg-white/[0.035] p-5 text-left backdrop-blur-2xl transition hover:border-cyan-300/30 hover:bg-white/[0.06]"
+                className="rounded-2xl border border-zinc-800 bg-zinc-900/30 p-6 text-left"
               >
-                <item.icon className="h-6 w-6 text-cyan-300" />
-                <h3 className="mt-4 font-bold text-white">{item.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-slate-400">
+                <item.icon className="h-5 w-5 text-zinc-400" />
+                <h3 className="mt-4 font-semibold text-zinc-100">{item.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-zinc-500">
                   {item.text}
                 </p>
               </div>
@@ -693,101 +631,30 @@ export default function Page() {
             variants={fadeUp}
             initial="hidden"
             animate="visible"
-            transition={{ duration: 0.75, delay: 0.36 }}
-            className="mt-8 w-full max-w-5xl rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 text-left shadow-2xl shadow-purple-950/20 backdrop-blur-2xl"
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="mt-12 w-full rounded-2xl border border-zinc-800 bg-zinc-900/30 p-8 text-left"
           >
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-4">
-                <div className="flex h-16 w-16 items-center justify-center rounded-3xl border border-purple-300/20 bg-purple-300/10 shadow-[0_0_45px_rgba(168,85,247,0.18)]">
-                  <UserRound className="h-8 w-8 text-purple-300" />
+                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-zinc-800">
+                  <UserRound className="h-6 w-6 text-zinc-300" />
                 </div>
-
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.25em] text-purple-300">
-                    Developer
+                  <p className="text-xs font-medium uppercase tracking-widest text-zinc-500">
+                    Lead Developer
                   </p>
-
-                  <h3 className="mt-1 text-2xl font-black text-white">Ranzz</h3>
-
-                  <p className="mt-1 text-sm text-slate-400">
-                    Full-Stack Web Developer & UI/UX Designer
+                  <h3 className="mt-1 text-xl font-bold text-white">Ranzz</h3>
+                  <p className="mt-1 text-sm text-zinc-400">
+                    Full-Stack Engineer
                   </p>
                 </div>
-              </div>
-
-              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-sm font-semibold text-cyan-100">
-                <Code2 className="h-4 w-4 text-cyan-300" />
-                Built with Next.js
               </div>
             </div>
           </motion.div>
 
-          <motion.section
-            variants={fadeUp}
-            initial="hidden"
-            animate="visible"
-            transition={{ duration: 0.75, delay: 0.42 }}
-            className="mt-10 w-full max-w-5xl text-left"
-          >
-            <div className="mb-6 flex items-center justify-between gap-4">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.25em] text-cyan-300">
-                  F&Q
-                </p>
-
-                <h2 className="mt-2 text-3xl font-black tracking-tight text-white sm:text-4xl">
-                  Frequently Asked Questions
-                </h2>
-              </div>
-
-              <div className="hidden h-14 w-14 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-300/10 sm:flex">
-                <HelpCircle className="h-7 w-7 text-cyan-300" />
-              </div>
-            </div>
-
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              variants={{
-                hidden: {},
-                visible: {
-                  transition: {
-                    staggerChildren: 0.08,
-                  },
-                },
-              }}
-              className="grid gap-4"
-            >
-              {faqs.map((faq, index) => (
-                <motion.div
-                  key={faq.question}
-                  variants={fadeUp}
-                  className="group rounded-3xl border border-white/10 bg-white/[0.035] p-6 backdrop-blur-2xl transition hover:border-cyan-300/30 hover:bg-white/[0.06] hover:shadow-[0_0_40px_rgba(34,211,238,0.08)]"
-                >
-                  <div className="flex gap-4">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-purple-300/20 bg-purple-300/10 text-sm font-black text-purple-200">
-                      {index + 1}
-                    </div>
-
-                    <div>
-                      <h3 className="text-lg font-bold text-white">
-                        {faq.question}
-                      </h3>
-
-                      <p className="mt-2 text-sm leading-7 text-slate-400">
-                        {faq.answer}
-                      </p>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </motion.div>
-          </motion.section>
-
-          <footer className="mt-14 w-full max-w-5xl border-t border-white/10 py-8 text-center">
-            <p className="text-sm text-slate-500">
-              © {new Date().getFullYear()} Ranzz Downloader. Developed by{" "}
-              <span className="font-bold text-cyan-300">Ranzz</span>.
+          <footer className="mt-16 w-full border-t border-zinc-800 pt-8 text-center">
+            <p className="text-xs text-zinc-600">
+              © {new Date().getFullYear()} Ranzz Downloader. All rights reserved.
             </p>
           </footer>
         </div>
