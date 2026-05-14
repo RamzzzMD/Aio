@@ -9,52 +9,41 @@ function sanitizeFileName(name) {
     .slice(0, 80);
 }
 
-function isPrivateIPv4(hostname) {
-  const parts = hostname.split(".").map(Number);
-  if (parts.length !== 4 || parts.some((n) => Number.isNaN(n))) return false;
-  const [a, b] = parts;
-  return (
-    a === 10 || a === 127 || a === 0 ||
-    (a === 172 && b >= 16 && b <= 31) ||
-    (a === 192 && b === 168) ||
-    (a === 169 && b === 254)
-  );
-}
-
-function validateTargetUrl(value) {
-  if (!value) throw new Error("URL file tidak ditemukan.");
-  let parsed;
-  try {
-    parsed = new URL(value);
-  } catch {
-    throw new Error("URL file tidak valid.");
-  }
-  if (!["http:", "https:"].includes(parsed.protocol)) throw new Error("Protokol tidak didukung.");
-  const hostname = parsed.hostname.toLowerCase();
-  if (hostname === "localhost" || hostname.endsWith(".local") || isPrivateIPv4(hostname)) {
-    throw new Error("Akses ke URL lokal dilarang.");
-  }
-  return parsed.toString();
-}
-
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
-    const targetUrl = validateTargetUrl(searchParams.get("url"));
+    const targetUrl = searchParams.get("url");
     const fileName = sanitizeFileName(searchParams.get("name") || "media");
+
+    if (!targetUrl) throw new Error("URL file tidak ditemukan.");
+
+    // KUNCI PERBAIKAN: Gunakan User-Agent Android 15 yang SAMA PERSIS dengan 
+    // scraper downr.org agar signature URL YouTube tidak bocor/diblokir.
+    const headers = {
+      "user-agent": "Mozilla/5.0 (Linux; Android 15; SM-F958 Build/AP3A.240905.015) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.86 Mobile Safari/537.36",
+      "accept": "*/*"
+    };
+
+    // Jangan kirim referer Google untuk link YouTube (googlevideo) agar tidak dicurigai
+    if (!targetUrl.includes("googlevideo.com")) {
+      headers["referer"] = "https://www.google.com/";
+    }
 
     const upstream = await fetch(targetUrl, {
       redirect: "follow",
-      headers: {
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "accept": "*/*",
-        "referer": "https://www.google.com/", // Manipulasi referer agar tidak diblokir
-      },
+      headers: headers,
     });
 
     if (!upstream.ok || !upstream.body) {
+      // FALLBACK: Jika server proxy kita (misal IP Vercel) tetap diblokir oleh YouTube,
+      // alihkan (redirect) pengguna secara paksa agar browser pengguna yang langsung 
+      // mengunduh file dari server googlevideo.
+      if (targetUrl.includes("googlevideo.com")) {
+         return NextResponse.redirect(targetUrl);
+      }
+
       return NextResponse.json(
-        { ok: false, message: "Server media menolak permintaan. File mungkin diproteksi." },
+        { ok: false, message: `Server media menolak permintaan (Status: ${upstream.status}). File diproteksi.` },
         { status: upstream.status || 502 }
       );
     }
@@ -72,7 +61,6 @@ export async function GET(request) {
       responseHeaders["Content-Length"] = contentLength;
     }
 
-    // Mengalirkan (Stream) body secara langsung untuk efisiensi memori
     return new NextResponse(upstream.body, {
       headers: responseHeaders,
     });
