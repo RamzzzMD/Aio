@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { Toaster, toast } from "sonner";
 
-// Komponen Ikon GitHub
+// Komponen Ikon GitHub Manual (Bypass error lucide-react)
 function GithubIcon(props) {
   return (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -101,13 +101,9 @@ export default function Page() {
     }
   }
 
-  // PERBAIKAN: Menggunakan Native Browser Download (Anti-Error & Tanpa Tab Baru)
   function handleDownloadNative(fileUrl, fileName) {
     toast.info("Mengunduh dimulai...");
     const downloadUrl = `/api/file?url=${encodeURIComponent(fileUrl)}&name=${encodeURIComponent(fileName)}`;
-    
-    // Cara paling stabil: manipulasi window.location
-    // Karena API kita kirim header 'attachment', browser tidak akan pindah halaman
     window.location.href = downloadUrl;
   }
 
@@ -122,8 +118,8 @@ export default function Page() {
             <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-zinc-900 p-8 rounded-3xl border border-zinc-800 relative max-w-xs w-full text-center">
               <button onClick={() => setShowQris(false)} className="absolute right-4 top-4 text-zinc-500"><X /></button>
               <h3 className="font-bold mb-4">Donasi QRIS</h3>
-              <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=RanzzDonation" className="mx-auto rounded-xl mb-4 bg-white p-2" />
-              <p className="text-xs text-zinc-500 italic">Dukungan Anda sangat berarti.</p>
+              <img src="https://raw.githubusercontent.com/kamdjut-ui/uploader/refs/heads/main/uploads/1774444884166_QRIS_(1).jpeg" className="mx-auto rounded-xl mb-4 bg-white p-2" />
+              <p className="text-xs text-zinc-600 italic">Dukungan Anda sangat berarti.</p>
             </motion.div>
           </motion.div>
         )}
@@ -137,7 +133,10 @@ export default function Page() {
         </nav>
 
         <div className="text-center flex-1">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">Download Social Media. <span className="text-zinc-500">Professionally.</span></h1>
+          {/* Header Utama yang Diperbarui */}
+          <h1 className="text-4xl md:text-6xl font-bold mb-6">
+            Download <span className="text-zinc-500">ALL</span> Social Media.
+          </h1>
           
           <form onSubmit={handleSubmit} className="mb-12">
             <div className="bg-zinc-900/50 border border-zinc-800 p-2 rounded-2xl flex flex-col sm:flex-row gap-2">
