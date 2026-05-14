@@ -6,7 +6,7 @@ import {
   AlertTriangle,
   ArrowDownToLine,
   CheckCircle2,
-  Clipboard, // Tambahan: Ikon Tempel
+  Clipboard,
   Copy,
   Download,
   HelpCircle,
@@ -22,7 +22,6 @@ import {
 } from "lucide-react";
 import { Toaster, toast } from "sonner";
 
-// Komponen Ikon GitHub Manual
 function GithubIcon(props) {
   return (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -44,34 +43,80 @@ function sanitizeClientFileName(value) {
 
 function pick(...values) { return values.find((v) => typeof v === "string" && v.trim().length > 0); }
 
+// PERBAIKAN: Deteksi ekstensi yang lebih cerdas untuk Slide IG/TikTok
+function detectExtension(url = "", type = "") {
+  const lowerUrl = url.toLowerCase();
+  const lowerType = type.toLowerCase();
+  
+  if (lowerType.includes("audio") || lowerUrl.includes(".mp3") || lowerUrl.includes(".m4a")) return "mp3";
+  // Deteksi format gambar dan parameter khas link slide TikTok (~tplv-)
+  if (lowerType.includes("image") || lowerUrl.includes(".jpg") || lowerUrl.includes(".jpeg") || lowerUrl.includes(".png") || lowerUrl.includes(".webp") || lowerUrl.includes("~tplv-")) return "jpg";
+  if (lowerUrl.includes(".mov")) return "mov";
+  
+  return "mp4";
+}
+
+// PERBAIKAN: Penanganan Data API agar bisa membaca Slide dan Audio
 function normalizeApiResponse(apiData) {
   const root = apiData?.data || apiData?.result || apiData || {};
   const title = pick(root.title, root.caption, root.description, root.text) || "Untitled Media";
   const author = pick(root.author, root.uploader, root.username) || "Unknown Creator";
   const thumbnail = pick(root.thumbnail, root.thumb, root.cover) || "";
   const source = pick(root.source, root.platform) || "Social Media";
-  const possibleDownloads = root.medias || root.media || root.links || root.downloads || [];
-  let downloads = Array.isArray(possibleDownloads) ? possibleDownloads : [];
+  
+  // 1. Ambil array jika itu berupa post Slide/Carousel
+  const possibleDownloads = root.images || root.medias || root.media || root.links || root.downloads || [];
+  let downloads = Array.isArray(possibleDownloads) && possibleDownloads.length > 0 ? [...possibleDownloads] : [];
 
+  // 2. Jika bukan slide (array kosong), ambil link video reguler
   if (!downloads.length) {
-    const direct = [root.url, root.downloadUrl, root.video, root.audio].filter(Boolean);
-    downloads = direct.map((url, i) => ({ url, quality: i === 0 ? "Default" : `Media ${i + 1}` }));
+    const direct = [root.url, root.downloadUrl, root.video].filter(Boolean);
+    downloads = direct.map((url, i) => ({ url, quality: i === 0 ? "Default" : `Video ${i + 1}` }));
   }
 
+  // 3. Khusus TikTok Slide, biasanya ada audio musik terpisah, kita tambahkan ke daftar!
+  if (root.audio && typeof root.audio === "string") {
+    downloads.push({ url: root.audio, quality: "Audio/Music", type: "audio" });
+  }
+
+  // 4. Petakan (Map) dan tentukan Ekstensi & Label secara otomatis
   const mapped = downloads.map((item, index) => {
     const entry = typeof item === "string" ? { url: item } : item || {};
-    const fileUrl = pick(entry.url, entry.link, entry.downloadUrl);
+    const fileUrl = pick(entry.url, entry.link, entry.downloadUrl, entry.src);
+    
     if (!fileUrl) return null;
+
+    const detectedType = entry.type || "";
+    const detectedExt = detectExtension(fileUrl, detectedType);
+    let qualityLabel = pick(entry.quality, entry.resolution);
+
+    // Otomatis memberi label "Slide 1, Slide 2" jika itu gambar
+    if (!qualityLabel) {
+      if (detectedExt === "jpg" || detectedExt === "png" || detectedExt === "webp") {
+        // Jika ada lagu tambahan di akhir (index terakhir beda hitungan), sesuaikan index slide
+        qualityLabel = `Slide ${index + 1}`;
+      } else if (detectedExt === "mp3") {
+        qualityLabel = `Audio ${index + 1}`;
+      } else {
+        qualityLabel = `File ${index + 1}`;
+      }
+    }
+
+    if (entry.quality === "Audio/Music") qualityLabel = "Audio/Music"; // Override khusus musik
+
     return {
       id: `${index}-${fileUrl}`,
       url: fileUrl,
-      quality: pick(entry.quality, entry.resolution) || `File ${index + 1}`,
-      extension: entry.extension || "mp4",
+      quality: qualityLabel,
+      extension: entry.extension || detectedExt,
       size: entry.size || ""
     };
   }).filter(Boolean);
 
-  return { title, author, thumbnail, source, downloads: mapped };
+  // Buang url ganda jika ada
+  const uniqueMapped = Array.from(new Map(mapped.map(item => [item.url, item])).values());
+
+  return { title, author, thumbnail, source, downloads: uniqueMapped };
 }
 
 export default function Page() {
@@ -102,7 +147,6 @@ export default function Page() {
     }
   }
 
-  // Fungsi Tempel (Paste) dari Clipboard
   async function handlePaste() {
     try {
       const text = await navigator.clipboard.readText();
@@ -162,17 +206,10 @@ export default function Page() {
                   className="bg-transparent flex-1 py-3 outline-none text-sm" 
                 />
                 
-                {/* Tombol Paste (Selalu muncul untuk membantu input) */}
-                <button 
-                  type="button" 
-                  onClick={handlePaste} 
-                  className="p-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg transition"
-                  title="Tempel URL"
-                >
+                <button type="button" onClick={handlePaste} className="p-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg transition" title="Tempel URL">
                   <Clipboard size={18} />
                 </button>
 
-                {/* Tombol Copy (Hanya muncul jika ada input) */}
                 {url && (
                   <button 
                     type="button" 
@@ -208,7 +245,8 @@ export default function Page() {
                     <h2 className="text-xl font-bold line-clamp-2 mt-1">{result.title}</h2>
                     <p className="text-sm text-zinc-500">{result.author}</p>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-6">
+                  {/* Grid ini akan scroll otomatis jika slide banyak */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-6 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                     {result.downloads.map((file, i) => (
                       <button key={i} onClick={() => handleDownloadNative(file.url, sanitizeClientFileName(result.title) + "." + file.extension)} className="flex justify-between items-center p-3 border border-zinc-800 rounded-xl hover:bg-zinc-800 transition group text-left">
                         <div className="min-w-0">
