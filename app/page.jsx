@@ -10,25 +10,44 @@ import {
   Copy,
   Download,
   FileVideo,
-  Github, // Tambahan
   Globe2,
   HelpCircle,
   ImageIcon,
   Link2,
   Loader2,
-  MessageCircle, // Tambahan (WhatsApp)
+  MessageCircle,
   Music,
   PlayCircle,
-  QrCode, // Tambahan (QRIS)
-  Send, // Tambahan (Telegram)
+  QrCode,
+  Send,
   ShieldCheck,
   Sparkles,
   UserRound,
   Wand2,
-  X, // Tambahan
+  X,
   Zap,
 } from "lucide-react";
 import { Toaster, toast } from "sonner";
+
+// Komponen kustom SVG untuk ikon GitHub pengganti bawaan Lucide
+function GithubIcon(props) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.2c3-.3 6-1.5 6-6.5a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 5 3 6.2 6 6.5a4.8 4.8 0 0 0-1 3.2v4" />
+    </svg>
+  );
+}
 
 const platforms = [
   "TikTok",
@@ -131,7 +150,7 @@ export default function Page() {
   const [errorState, setErrorState] = useState("");
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [showQris, setShowQris] = useState(false); // State untuk Modal QRIS
+  const [showQris, setShowQris] = useState(false);
 
   const canSubmit = useMemo(() => url.trim().length > 0 && !loading, [url, loading]);
 
@@ -161,6 +180,17 @@ export default function Page() {
     }
   }
 
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      toast.success("Copied to clipboard.");
+      setTimeout(() => setCopied(false), 1200);
+    } catch {
+      toast.error("Failed to copy URL.");
+    }
+  }
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#09090b] text-zinc-100">
       <Toaster richColors theme="dark" position="top-center" />
@@ -185,6 +215,7 @@ export default function Page() {
               <p className="text-sm text-zinc-500 mb-6">Dukung pengembangan project ini</p>
               
               <div className="aspect-square w-full rounded-2xl bg-white p-4 mb-6 shadow-inner">
+                 {/* Ganti URL gambar di bawah ini dengan gambar/URL QRIS asli Anda */}
                  <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=RanzzDonation" alt="QRIS" className="w-full h-full object-contain" />
               </div>
               
@@ -220,6 +251,11 @@ export default function Page() {
               <div className="flex flex-1 items-center gap-3 px-4 py-3">
                 <Link2 className="h-5 w-5 text-zinc-400" />
                 <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Paste URL here..." className="w-full bg-transparent text-sm outline-none" />
+                {url && (
+                  <button type="button" onClick={handleCopy} className="rounded-md p-1.5 text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-200">
+                    {copied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  </button>
+                )}
               </div>
               <button disabled={!canSubmit} className="flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 font-semibold text-zinc-950 transition hover:bg-zinc-200 disabled:bg-zinc-800 disabled:text-zinc-500">
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowDownToLine className="h-4 w-4" />} Extract
@@ -281,7 +317,8 @@ export default function Page() {
                   <Send className="h-5 w-5" />
                 </a>
                 <a href="https://github.com/RamzzzMD" target="_blank" className="flex h-12 w-12 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/50 text-zinc-400 transition hover:border-white/50 hover:text-white hover:bg-white/10" title="GitHub">
-                  <Github className="h-5 w-5" />
+                  {/* Gunakan komponen GithubIcon custom kita di sini */}
+                  <GithubIcon className="h-5 w-5" />
                 </a>
                 <button onClick={() => setShowQris(true)} className="flex h-12 items-center gap-3 px-5 rounded-xl border border-zinc-800 bg-zinc-900/50 text-zinc-400 transition hover:border-yellow-500/50 hover:text-yellow-400 hover:bg-yellow-500/10" title="Donasi">
                   <QrCode className="h-5 w-5" />
