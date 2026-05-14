@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   ArrowDownToLine,
   CheckCircle2,
+  Clipboard, // Tambahan: Ikon Tempel
   Copy,
   Download,
   HelpCircle,
@@ -21,7 +22,7 @@ import {
 } from "lucide-react";
 import { Toaster, toast } from "sonner";
 
-// Komponen Ikon GitHub Manual (Bypass error lucide-react)
+// Komponen Ikon GitHub Manual
 function GithubIcon(props) {
   return (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -101,6 +102,19 @@ export default function Page() {
     }
   }
 
+  // Fungsi Tempel (Paste) dari Clipboard
+  async function handlePaste() {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) {
+        setUrl(text);
+        toast.success("URL berhasil ditempel.");
+      }
+    } catch (error) {
+      toast.error("Gagal menempel. Pastikan izin clipboard diizinkan.");
+    }
+  }
+
   function handleDownloadNative(fileUrl, fileName) {
     toast.info("Mengunduh dimulai...");
     const downloadUrl = `/api/file?url=${encodeURIComponent(fileUrl)}&name=${encodeURIComponent(fileName)}`;
@@ -133,14 +147,48 @@ export default function Page() {
         </nav>
 
         <div className="text-center flex-1">
-          {/* Header Utama yang Diperbarui */}
           <h1 className="text-4xl md:text-6xl font-bold mb-6">
-            Download <span className="text-zinc-500">ALL</span> Social Media.
+            Download <span className="text-zinc-500">all</span> Social Media.
           </h1>
           
           <form onSubmit={handleSubmit} className="mb-12">
             <div className="bg-zinc-900/50 border border-zinc-800 p-2 rounded-2xl flex flex-col sm:flex-row gap-2">
-              <input value={url} onChange={(e)=>setUrl(e.target.value)} placeholder="Paste URL here..." className="bg-transparent flex-1 px-4 outline-none text-sm" />
+              <div className="flex flex-1 items-center gap-2 bg-transparent px-2">
+                <Link2 className="text-zinc-400 shrink-0" size={18} />
+                <input 
+                  value={url} 
+                  onChange={(e)=>setUrl(e.target.value)} 
+                  placeholder="Paste URL here..." 
+                  className="bg-transparent flex-1 py-3 outline-none text-sm" 
+                />
+                
+                {/* Tombol Paste (Selalu muncul untuk membantu input) */}
+                <button 
+                  type="button" 
+                  onClick={handlePaste} 
+                  className="p-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg transition"
+                  title="Tempel URL"
+                >
+                  <Clipboard size={18} />
+                </button>
+
+                {/* Tombol Copy (Hanya muncul jika ada input) */}
+                {url && (
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      navigator.clipboard.writeText(url);
+                      setCopied(true);
+                      toast.success("Disalin ke clipboard.");
+                      setTimeout(() => setCopied(false), 1200);
+                    }} 
+                    className="p-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg transition"
+                  >
+                    {copied ? <CheckCircle2 size={18} className="text-green-500" /> : <Copy size={18} />}
+                  </button>
+                )}
+              </div>
+              
               <button disabled={loading} className="bg-white text-zinc-950 px-6 py-3 rounded-xl font-bold hover:bg-zinc-200 transition disabled:opacity-50">
                 {loading ? <Loader2 className="animate-spin inline mr-2" size={18}/> : "Extract"}
               </button>
