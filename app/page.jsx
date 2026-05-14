@@ -279,7 +279,13 @@ export default function Page() {
                     </div>
                     <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {result.downloads.map((file) => (
-                        <a key={file.id} href={`/api/file?url=${encodeURIComponent(file.url)}&name=${encodeURIComponent(sanitizeClientFileName(result.title) + "." + file.extension)}`} className="flex items-center justify-between p-3 rounded-xl border border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 transition group">
+                        <a 
+                            key={file.id} 
+                            href={`/api/file?url=${encodeURIComponent(file.url)}&name=${encodeURIComponent(sanitizeClientFileName(result.title) + "." + file.extension)}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-between p-3 rounded-xl border border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 transition group"
+                          >
                           <div className="min-w-0">
                             <p className="text-sm font-medium text-zinc-200 truncate">{file.quality}</p>
                             <p className="text-[10px] text-zinc-500 uppercase font-bold">{file.extension} {file.size ? `• ${file.size}` : ""}</p>
