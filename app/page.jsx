@@ -32,65 +32,36 @@ import { Toaster, toast } from "sonner";
 // Komponen kustom SVG untuk ikon GitHub
 function GithubIcon(props) {
   return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.2c3-.3 6-1.5 6-6.5a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 5 3 6.2 6 6.5a4.8 4.8 0 0 0-1 3.2v4" />
     </svg>
   );
 }
 
-const platforms = [
-  "TikTok",
-  "Instagram",
-  "Facebook",
-  "X/Twitter",
-  "YouTube",
-  "Pinterest",
-  "Threads",
-];
+const platforms = ["TikTok", "Instagram", "Facebook", "X/Twitter", "YouTube", "Pinterest", "Threads"];
 
 const faqs = [
   {
     question: "Apa itu Ranzz Downloader?",
-    answer:
-      "Aplikasi downloader media all-in-one yang profesional dengan antarmuka bersih dan integrasi backend yang aman.",
+    answer: "Aplikasi downloader media all-in-one yang profesional dengan antarmuka bersih dan integrasi backend yang aman.",
   },
   {
     question: "Platform apa saja yang didukung?",
-    answer:
-      "Mendukung TikTok, Instagram, Facebook, X/Twitter, YouTube, Pinterest, Threads, dan lainnya.",
+    answer: "Mendukung TikTok, Instagram, Facebook, X/Twitter, YouTube, Pinterest, Threads, dan lainnya.",
   },
   {
     question: "Apakah aman?",
-    answer:
-      "Ya. Semua pemrosesan ditangani secara aman di sisi server tanpa mengekspos konfigurasi sensitif ke browser.",
+    answer: "Ya. Semua pemrosesan ditangani secara aman di sisi server tanpa mengekspos konfigurasi sensitif ke browser.",
   },
   {
     question: "Siapa pengembangnya?",
-    answer:
-      "Aplikasi ini dikembangkan oleh Ranzz, spesialis full-stack web architecture dan desain UI/UX minimalis.",
+    answer: "Aplikasi ini dikembangkan oleh Ranzz, spesialis full-stack web architecture dan desain UI/UX minimalis.",
   },
 ];
 
-function cn(...classes) {
-  return classes.filter(Boolean).join(" ");
-}
+function cn(...classes) { return classes.filter(Boolean).join(" "); }
 
-function pick(...values) {
-  return values.find(
-    (value) => typeof value === "string" && value.trim().length > 0
-  );
-}
+function pick(...values) { return values.find((value) => typeof value === "string" && value.trim().length > 0); }
 
 function detectExtension(url = "", type = "") {
   const lowerUrl = url.toLowerCase();
@@ -108,10 +79,7 @@ function detectExtension(url = "", type = "") {
 }
 
 function sanitizeClientFileName(value) {
-  return String(value || "media")
-    .replace(/[<>:"/\\|?*\x00-\x1F]/g, "")
-    .replace(/\s+/g, "-")
-    .slice(0, 70);
+  return String(value || "media").replace(/[<>:"/\\|?*\x00-\x1F]/g, "").replace(/\s+/g, "-").slice(0, 70);
 }
 
 function normalizeApiResponse(apiData) {
@@ -191,26 +159,21 @@ export default function Page() {
     }
   }
 
-  // FUNGSI BARU: Mengunduh secara background tanpa buka tab baru
   async function handleDownloadBackground(fileUrl, fileName) {
     const toastId = toast.loading(`Mengunduh media...`);
     try {
       const res = await fetch(`/api/file?url=${encodeURIComponent(fileUrl)}&name=${encodeURIComponent(fileName)}`);
       if (!res.ok) throw new Error("Gagal mengunduh file dari server.");
-      
       const blob = await res.blob();
       const blobUrl = window.URL.createObjectURL(blob);
-      
       const a = document.createElement("a");
       a.style.display = "none";
       a.href = blobUrl;
       a.download = fileName;
       document.body.appendChild(a);
       a.click();
-      
       window.URL.revokeObjectURL(blobUrl);
       a.remove();
-      
       toast.success("Unduhan selesai!", { id: toastId });
     } catch (error) {
       toast.error("Terjadi kesalahan saat mengunduh.", { id: toastId });
@@ -224,26 +187,16 @@ export default function Page() {
       {/* MODAL QRIS */}
       <AnimatePresence>
         {showQris && (
-          <motion.div 
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={() => setShowQris(false)}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-6 backdrop-blur-sm"
-          >
-            <motion.div 
-              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
-              onClick={(e) => e.stopPropagation()}
-              className="relative max-w-sm w-full rounded-3xl border border-zinc-800 bg-zinc-900 p-8 text-center shadow-2xl"
-            >
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowQris(false)} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-6 backdrop-blur-sm">
+            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} onClick={(e) => e.stopPropagation()} className="relative max-w-sm w-full rounded-3xl border border-zinc-800 bg-zinc-900 p-8 text-center shadow-2xl">
               <button onClick={() => setShowQris(false)} className="absolute right-4 top-4 text-zinc-500 hover:text-white transition-colors">
                 <X className="h-5 w-5" />
               </button>
               <h3 className="text-xl font-bold text-white mb-2">Donasi QRIS</h3>
               <p className="text-sm text-zinc-500 mb-6">Dukung pengembangan project ini</p>
-              
               <div className="aspect-square w-full rounded-2xl bg-white p-4 mb-6 shadow-inner">
                  <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=RanzzDonation" alt="QRIS" className="w-full h-full object-contain" />
               </div>
-              
               <p className="text-xs text-zinc-600 italic">Scan menggunakan DANA, GoPay, atau ShopeePay</p>
             </motion.div>
           </motion.div>
@@ -258,9 +211,6 @@ export default function Page() {
               <p className="text-sm font-bold text-white">Ranzz Downloader</p>
               <p className="text-xs text-zinc-400">Media Parsing Utility</p>
             </div>
-          </div>
-          <div className="hidden items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/50 px-3 py-1.5 text-xs text-zinc-400 sm:flex">
-            <ShieldCheck className="h-4 w-4 text-zinc-300" /> Secure Tunnel
           </div>
         </motion.nav>
 
@@ -301,12 +251,7 @@ export default function Page() {
                     </div>
                     <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {result.downloads.map((file) => (
-                        <button 
-                          key={file.id} 
-                          // Memanggil fungsi download background
-                          onClick={() => handleDownloadBackground(file.url, sanitizeClientFileName(result.title) + "." + file.extension)} 
-                          className="w-full flex items-center justify-between p-3 rounded-xl border border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 transition group text-left"
-                        >
+                        <button key={file.id} onClick={() => handleDownloadBackground(file.url, sanitizeClientFileName(result.title) + "." + file.extension)} className="w-full flex items-center justify-between p-3 rounded-xl border border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 transition group text-left">
                           <div className="min-w-0">
                             <p className="text-sm font-medium text-zinc-200 truncate">{file.quality}</p>
                             <p className="text-[10px] text-zinc-500 uppercase font-bold">{file.extension} {file.size ? `• ${file.size}` : ""}</p>
@@ -333,18 +278,10 @@ export default function Page() {
                   <p className="mt-1 text-sm text-zinc-400">Full-Stack Engineer & UI Designer</p>
                 </div>
               </div>
-
-              {/* SOCIAL & DONATE BUTTONS (target="_blank" sudah dihapus) */}
               <div className="flex flex-wrap gap-3">
-                <a href="https://wa.me/628123456789" className="flex h-12 w-12 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/50 text-zinc-400 transition hover:border-green-500/50 hover:text-green-400 hover:bg-green-500/10" title="WhatsApp">
-                  <MessageCircle className="h-5 w-5" />
-                </a>
-                <a href="https://t.me/Ranzz" className="flex h-12 w-12 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/50 text-zinc-400 transition hover:border-sky-500/50 hover:text-sky-400 hover:bg-sky-500/10" title="Telegram">
-                  <Send className="h-5 w-5" />
-                </a>
-                <a href="https://github.com/RamzzzMD" className="flex h-12 w-12 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/50 text-zinc-400 transition hover:border-white/50 hover:text-white hover:bg-white/10" title="GitHub">
-                  <GithubIcon className="h-5 w-5" />
-                </a>
+                <a href="https://wa.me/628123456789" className="flex h-12 w-12 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/50 text-zinc-400 transition hover:border-green-500/50 hover:text-green-400 hover:bg-green-500/10" title="WhatsApp"><MessageCircle className="h-5 w-5" /></a>
+                <a href="https://t.me/Ranzz" className="flex h-12 w-12 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/50 text-zinc-400 transition hover:border-sky-500/50 hover:text-sky-400 hover:bg-sky-500/10" title="Telegram"><Send className="h-5 w-5" /></a>
+                <a href="https://github.com/RamzzzMD" className="flex h-12 w-12 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/50 text-zinc-400 transition hover:border-white/50 hover:text-white hover:bg-white/10" title="GitHub"><GithubIcon className="h-5 w-5" /></a>
                 <button onClick={() => setShowQris(true)} className="flex h-12 items-center gap-3 px-5 rounded-xl border border-zinc-800 bg-zinc-900/50 text-zinc-400 transition hover:border-yellow-500/50 hover:text-yellow-400 hover:bg-yellow-500/10" title="Donasi">
                   <QrCode className="h-5 w-5" />
                   <span className="text-xs font-bold uppercase tracking-widest">Donasi</span>
@@ -353,7 +290,28 @@ export default function Page() {
             </div>
           </motion.div>
 
-          <footer className="mt-20 w-full border-t border-zinc-800 pt-8 text-center">
+          {/* BAGIAN F&Q YANG DIKEMBALIKAN */}
+          <motion.section variants={fadeUp} initial="hidden" animate="visible" transition={{ delay: 0.3 }} className="mt-16 w-full text-left">
+            <div className="mb-6 flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/50">
+                <HelpCircle className="h-6 w-6 text-zinc-400" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold tracking-tight text-white">Pertanyaan Umum</h2>
+                <p className="text-sm text-zinc-500">FAQ seputar Ranzz Downloader</p>
+              </div>
+            </div>
+            <div className="grid gap-3">
+              {faqs.map((faq, index) => (
+                <div key={index} className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-5 transition hover:bg-zinc-900/50">
+                  <h3 className="text-base font-semibold text-zinc-200">{faq.question}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-zinc-400">{faq.answer}</p>
+                </div>
+              ))}
+            </div>
+          </motion.section>
+
+          <footer className="mt-16 w-full border-t border-zinc-800 pt-8 text-center pb-10">
             <p className="text-[10px] uppercase tracking-widest text-zinc-600 font-bold">
               © {new Date().getFullYear()} Ranzz Downloader. All rights reserved.
             </p>
