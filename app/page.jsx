@@ -9,6 +9,7 @@ import {
   Clipboard,
   Copy,
   Download,
+  Eraser, // Tambahan: Ikon Hapus
   FileVideo,
   Globe2,
   HelpCircle,
@@ -42,6 +43,10 @@ const faqs = [
   { question: "Siapa pengembangnya?", answer: "Aplikasi ini dikembangkan oleh Ranzz." },
 ];
 
+const supportedPlatforms = [
+  "TikTok", "Instagram", "Facebook", "X / Twitter", "YouTube", "Pinterest", "Threads"
+];
+
 function sanitizeClientFileName(value) {
   return String(value || "media").replace(/[<>:"/\\|?*\x00-\x1F]/g, "").replace(/\s+/g, "-").slice(0, 120);
 }
@@ -57,15 +62,12 @@ function detectExtension(url = "", type = "") {
   return "mp4";
 }
 
-// PERBAIKAN: Menarik Foto Profil, Caption Penuh, dan Hashtags
 function normalizeApiResponse(apiData) {
   const root = apiData?.data || apiData?.result || apiData || {};
-  
   const caption = pick(root.caption, root.description, root.text, root.title) || "Media berhasil diekstrak.";
   const author = pick(root.author?.nickname, root.author?.name, root.author, root.uploader, root.username) || "Unknown Creator";
   const source = pick(root.source, root.platform) || "Social Media";
   
-  // Mencari Foto Profil Kreator
   const authorAvatar = pick(
     root.author_avatar, 
     root.author?.avatar_thumb, 
@@ -74,7 +76,6 @@ function normalizeApiResponse(apiData) {
     root.avatar
   ) || "";
 
-  // Ekstrak Tags/Hashtags (Jika ada array tags dari API, pakai itu. Jika tidak, regex dari caption)
   let tags = Array.isArray(root.tags) ? root.tags : [];
   if (!tags.length && typeof caption === "string") {
     const matched = caption.match(/#[\w]+/g);
@@ -124,7 +125,7 @@ function normalizeApiResponse(apiData) {
 
   const uniqueMapped = Array.from(new Map(mapped.map(item => [item.url, item])).values());
 
-  return { caption, author, authorAvatar, tags, source, downloads: uniqueMapped };
+  return { caption, author, authorAvatar, tags, source, downloads: uniqueMapped, thumbnail: root.thumbnail || root.cover || "" };
 }
 
 export default function Page() {
@@ -177,7 +178,6 @@ export default function Page() {
     <main className="relative min-h-screen bg-[#09090b] text-zinc-100 p-6">
       <Toaster richColors theme="dark" position="top-center" />
 
-      {/* Modal QRIS */}
       <AnimatePresence>
         {showQris && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowQris(false)} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
@@ -192,7 +192,6 @@ export default function Page() {
       </AnimatePresence>
 
       <div className="max-w-4xl mx-auto flex flex-col min-h-screen">
-        {/* Navbar */}
         <nav className="flex justify-between items-center border-b border-zinc-800 pb-6 mb-12">
           <div className="flex items-center gap-2 font-bold"><ArrowDownToLine className="text-zinc-950 bg-zinc-100 p-1 rounded-md" /> Ranzz Downloader</div>
           <div className="text-xs text-zinc-500 flex items-center gap-1"><ShieldCheck size={14}/> Secure</div>
@@ -203,10 +202,9 @@ export default function Page() {
             Download <span className="text-zinc-500">ALL</span> Social Media.
           </h1>
           
-          {/* Form Input */}
           <form onSubmit={handleSubmit} className="mb-12 max-w-2xl mx-auto">
             <div className="bg-zinc-900/50 border border-zinc-800 p-2 rounded-2xl flex flex-col sm:flex-row gap-2 transition-colors focus-within:border-zinc-600">
-              <div className="flex flex-1 items-center gap-2 bg-transparent px-3">
+              <div className="flex flex-1 items-center gap-1 bg-transparent px-3">
                 <Link2 className="text-zinc-400 shrink-0" size={20} />
                 <input 
                   value={url} 
@@ -218,6 +216,18 @@ export default function Page() {
                 <button type="button" onClick={handlePaste} className="p-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg transition" title="Tempel URL">
                   <Clipboard size={18} />
                 </button>
+
+                {/* Tombol Hapus (Muncul saat ada text) */}
+                {url && (
+                  <button 
+                    type="button" 
+                    onClick={() => setUrl("")} 
+                    className="p-2 text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition"
+                    title="Hapus Teks"
+                  >
+                    <Eraser size={18} />
+                  </button>
+                )}
 
                 {url && (
                   <button 
@@ -241,12 +251,10 @@ export default function Page() {
             </div>
           </form>
 
-          {/* Result Card (Redesign ala Postingan Social Media Asli) */}
           <AnimatePresence>
             {result && (
               <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="bg-zinc-900 border border-zinc-800 p-5 sm:p-7 rounded-3xl text-left mb-12 shadow-2xl max-w-2xl mx-auto">
                 
-                {/* Header: Profil Creator & Source Badge */}
                 <div className="flex justify-between items-start mb-5">
                   <div className="flex items-center gap-3">
                     {result.authorAvatar ? (
@@ -265,7 +273,6 @@ export default function Page() {
                   </div>
                 </div>
 
-                {/* Body: Caption & Hashtags */}
                 <div className="mb-6">
                   <p className="text-sm sm:text-base text-zinc-300 leading-relaxed line-clamp-4 whitespace-pre-wrap">
                     {result.caption}
@@ -274,7 +281,6 @@ export default function Page() {
                   {result.tags && result.tags.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-3">
                       {result.tags.slice(0, 15).map((tag, i) => {
-                        // Memastikan hashtag memiliki format yang benar
                         const displayTag = tag.startsWith('#') ? tag : `#${tag}`;
                         return (
                           <span key={i} className="text-[11px] font-semibold text-cyan-400 bg-cyan-400/10 px-2.5 py-1 rounded-md border border-cyan-400/10">
@@ -286,49 +292,53 @@ export default function Page() {
                   )}
                 </div>
 
-                <div className="w-full h-px bg-zinc-800 mb-6" /> {/* Divider */}
+                <div className="w-full h-px bg-zinc-800 mb-6" />
 
-                {/* Footer: Download Grid */}
                 <div>
                   <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-3">Tersedia untuk Diunduh</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
+                  {/* Grid Galeri Diperbesar (2 Kolom) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
                     {result.downloads.map((file, i) => {
-                      const isImage = ["jpg", "jpeg", "png", "webp"].includes(file.extension);
-                      const isAudio = ["mp3", "m4a"].includes(file.extension);
+                      const isImage = file.extension === 'jpg' || file.extension === 'png' || file.extension === 'webp';
+                      const isVideo = file.extension === 'mp4' || file.extension === 'mov';
+                      const isAudio = file.extension === 'mp3' || file.extension === 'm4a';
+
+                      const previewSrc = isImage ? file.url : (isVideo ? result.thumbnail : null);
                       const safeFileName = `${sanitizeClientFileName(result.author)}-${sanitizeClientFileName(file.quality)}.${file.extension}`;
 
                       return (
-                        <div key={file.id} className="flex items-center justify-between p-2 pl-3 border border-zinc-800 rounded-xl bg-zinc-950/50 hover:bg-zinc-800 transition group text-left">
+                        <div key={file.id} className="group relative rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 aspect-[4/5] flex flex-col shadow-lg transition-transform hover:scale-[1.02]">
                           
-                          {/* Info Media Kiri */}
-                          <div className="flex items-center gap-3 min-w-0 pr-2">
-                            <div className="w-10 h-10 shrink-0 rounded-lg bg-zinc-900 flex items-center justify-center overflow-hidden border border-zinc-800">
-                              {isImage ? (
-                                <img src={file.url} alt="Slide Preview" className="w-full h-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
-                              ) : isAudio ? (
-                                <Music size={18} className="text-zinc-500" />
-                              ) : (
-                                <Video size={18} className="text-zinc-500" />
-                              )}
-                            </div>
+                          <div className="flex-1 relative w-full h-full bg-zinc-900 flex items-center justify-center overflow-hidden">
+                            {previewSrc ? (
+                              <img src={previewSrc} referrerPolicy="no-referrer" alt={file.quality} className="w-full h-full object-cover transition duration-500 group-hover:opacity-60" />
+                            ) : (
+                              isAudio ? <Music size={48} className="text-zinc-700" /> : <FileVideo size={48} className="text-zinc-700" />
+                            )}
                             
-                            <div className="min-w-0">
-                              <p className="text-sm font-semibold truncate text-zinc-200">{file.quality}</p>
-                              <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">{file.extension} {file.size ? `• ${file.size}` : ""}</p>
+                            <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent opacity-90 pointer-events-none" />
+                            
+                            <div className="absolute top-3 left-3 px-3 py-1 bg-black/60 backdrop-blur-md border border-white/10 rounded-lg text-[11px] font-bold uppercase text-zinc-200 shadow-xl">
+                              {file.quality}
                             </div>
                           </div>
 
-                          {/* Tombol Unduh Kanan */}
-                          <button 
-                            onClick={() => handleDownloadNative(file.url, safeFileName)} 
-                            className="p-2.5 mr-1 rounded-lg bg-white text-zinc-950 hover:scale-105 transition-transform shadow-md"
-                            title={`Unduh ${file.quality}`}
-                          >
-                            <Download size={16} strokeWidth={2.5} />
-                          </button>
+                          <div className="absolute bottom-0 left-0 right-0 p-4 flex justify-between items-center bg-zinc-950/40 backdrop-blur-sm border-t border-white/5">
+                            <div className="min-w-0 pr-2">
+                              <p className="text-[10px] text-zinc-400 uppercase font-bold tracking-wider truncate">{file.extension} {file.size ? `• ${file.size}` : ""}</p>
+                            </div>
+                            
+                            <button 
+                              onClick={() => handleDownloadNative(file.url, safeFileName)} 
+                              className="w-11 h-11 flex items-center justify-center bg-white text-zinc-950 rounded-full hover:bg-zinc-200 transition-all shadow-xl"
+                              title={`Download ${file.quality}`}
+                            >
+                              <Download size={20} strokeWidth={2.5} />
+                            </button>
+                          </div>
 
                         </div>
-                      );
+                      )
                     })}
                   </div>
                 </div>
@@ -337,7 +347,20 @@ export default function Page() {
             )}
           </AnimatePresence>
 
-          {/* Dev Card */}
+          {/* Supported Social Media Info */}
+          <div className="max-w-2xl mx-auto mb-6 text-left">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-[11px] font-medium text-zinc-500">
+              <Globe2 size={12}/> Supported Social Media
+            </div>
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
+              {supportedPlatforms.map((platform) => (
+                <span key={platform} className="text-xs font-semibold text-zinc-600">
+                  • {platform}
+                </span>
+              ))}
+            </div>
+          </div>
+
           <div className="bg-zinc-900/30 border border-zinc-800 p-6 sm:p-8 rounded-3xl text-left flex flex-col md:flex-row justify-between items-center gap-6 mb-16">
             <div className="flex gap-5 items-center">
               <div className="w-16 h-16 bg-zinc-800 rounded-2xl flex items-center justify-center shadow-inner"><UserRound size={28} className="text-zinc-400"/></div>
@@ -349,13 +372,12 @@ export default function Page() {
             </div>
             <div className="flex flex-wrap justify-center gap-3">
               <a href="https://wa.me/6281214300828" className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl hover:text-green-400 hover:border-green-500/50 transition-colors"><MessageCircle size={20}/></a>
-              <a href="https://t.me/cangcuthideung" className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl hover:text-sky-400 hover:border-sky-500/50 transition-colors"><Send size={20}/></a>
+              <a href="https://t.me/cancuthideung" className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl hover:text-sky-400 hover:border-sky-500/50 transition-colors"><Send size={20}/></a>
               <a href="https://github.com/RamzzzMD" className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl hover:text-white hover:border-white/50 transition-colors"><GithubIcon size={20}/></a>
               <button onClick={()=>setShowQris(true)} className="flex items-center gap-2 px-5 bg-zinc-900 border border-zinc-800 rounded-xl hover:text-yellow-400 hover:border-yellow-500/50 transition-colors"><QrCode size={20}/> <span className="text-xs font-bold uppercase tracking-widest">Donasi</span></button>
             </div>
           </div>
 
-          {/* FAQ Section */}
           <section className="text-left mb-16">
             <h2 className="text-2xl font-bold mb-6 flex items-center gap-3 text-white"><HelpCircle className="text-zinc-500" /> Pertanyaan Umum</h2>
             <div className="grid gap-3">
