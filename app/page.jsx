@@ -253,7 +253,6 @@ export default function Page() {
             {result && (
               <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="bg-zinc-900 border border-zinc-800 p-5 sm:p-7 rounded-3xl text-left mb-12 shadow-2xl max-w-2xl mx-auto">
                 
-                {/* Profil Header */}
                 <div className="flex justify-between items-start mb-5">
                   <div className="flex items-center gap-3">
                     {result.authorAvatar ? (
@@ -272,7 +271,6 @@ export default function Page() {
                   </div>
                 </div>
 
-                {/* Caption & Tags */}
                 <div className="mb-6">
                   <p className="text-sm sm:text-base text-zinc-300 leading-relaxed line-clamp-4 whitespace-pre-wrap">
                     {result.caption}
@@ -292,65 +290,90 @@ export default function Page() {
                   )}
                 </div>
 
-                <div className="w-full h-px bg-zinc-800 mb-6" />
+                {/* Pemisahan Rendering Berdasarkan Ekstensi */}
+                {(() => {
+                  const imageFiles = result.downloads.filter(f => ['jpg', 'jpeg', 'png', 'webp'].includes(f.extension));
+                  const mediaFiles = result.downloads.filter(f => !['jpg', 'jpeg', 'png', 'webp'].includes(f.extension));
 
-                {/* Grid Item Download */}
-                <div>
-                  <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-3">Tersedia untuk Diunduh</h4>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-                    {result.downloads.map((file, i) => {
-                      const isImage = file.extension === 'jpg' || file.extension === 'png' || file.extension === 'webp';
-                      const isAudio = file.extension === 'mp3' || file.extension === 'm4a';
-
-                      // PERBAIKAN: Hanya munculkan url file gambar sebagai previewSrc jika tipe file-nya adalah gambar.
-                      // Jika video atau musik, previewSrc dibuat `null` agar menampikan ikon.
-                      const previewSrc = isImage ? file.url : null;
-                      const safeFileName = `${sanitizeClientFileName(result.author)}-${sanitizeClientFileName(file.quality)}.${file.extension}`;
-
-                      return (
-                        <div key={file.id} className="group relative rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 aspect-[4/5] flex flex-col shadow-lg transition-transform hover:scale-[1.02]">
-                          
-                          <div className="flex-1 relative w-full h-full bg-zinc-900 flex items-center justify-center overflow-hidden">
-                            {/* Hanya render gambar (<img>) jika itu benar-benar gambar. Sisanya tampilkan ikon. */}
-                            {previewSrc ? (
-                              <img src={previewSrc} referrerPolicy="no-referrer" alt={file.quality} className="w-full h-full object-cover transition duration-500 group-hover:opacity-60" />
-                            ) : (
-                              isAudio ? <Music size={48} className="text-zinc-700" /> : <FileVideo size={48} className="text-zinc-700" />
-                            )}
-                            
-                            <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent opacity-90 pointer-events-none" />
-                            
-                            <div className="absolute top-3 left-3 px-3 py-1 bg-black/60 backdrop-blur-md border border-white/10 rounded-lg text-[11px] font-bold uppercase text-zinc-200 shadow-xl">
-                              {file.quality}
-                            </div>
+                  return (
+                    <>
+                      {/* Tampilkan Thumbnail Cover jika yang di-download murni Video (tidak ada Slide Image) */}
+                      {imageFiles.length === 0 && result.thumbnail && (
+                        <div className="w-full h-[250px] sm:h-[350px] rounded-2xl overflow-hidden border border-zinc-800 mb-6 bg-zinc-950 relative">
+                          <img src={result.thumbnail} referrerPolicy="no-referrer" className="w-full h-full object-cover opacity-40 blur-md absolute inset-0" />
+                          <img src={result.thumbnail} referrerPolicy="no-referrer" className="w-full h-full object-contain relative z-10" />
+                          <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                            <PlayCircle size={56} className="text-white/80 drop-shadow-xl" />
                           </div>
-
-                          <div className="absolute bottom-0 left-0 right-0 p-4 flex justify-between items-center bg-zinc-950/40 backdrop-blur-sm border-t border-white/5">
-                            <div className="min-w-0 pr-2">
-                              <p className="text-[10px] text-zinc-400 uppercase font-bold tracking-wider truncate">{file.extension} {file.size ? `• ${file.size}` : ""}</p>
-                            </div>
-                            
-                            <button 
-                              onClick={() => handleDownloadNative(file.url, safeFileName)} 
-                              className="w-11 h-11 flex items-center justify-center bg-white text-zinc-950 rounded-full hover:bg-zinc-200 transition-all shadow-xl"
-                              title={`Download ${file.quality}`}
-                            >
-                              <Download size={20} strokeWidth={2.5} />
-                            </button>
-                          </div>
-
                         </div>
-                      )
-                    })}
-                  </div>
-                </div>
+                      )}
+
+                      <div className="w-full h-px bg-zinc-800 mb-5" />
+                      <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4">Tersedia untuk Diunduh</h4>
+
+                      {/* AREA 1: Grid Khusus Gambar/Slide */}
+                      {imageFiles.length > 0 && (
+                        <div className="grid grid-cols-2 sm:grid-cols-2 gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar mb-4">
+                          {imageFiles.map((file) => {
+                            const safeFileName = `${sanitizeClientFileName(result.author)}-${sanitizeClientFileName(file.quality)}.${file.extension}`;
+                            return (
+                              <div key={file.id} className="group relative rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 aspect-[4/5] flex flex-col shadow-lg transition-transform hover:scale-[1.02]">
+                                <div className="flex-1 relative w-full h-full bg-zinc-900 flex items-center justify-center overflow-hidden">
+                                  <img src={file.url} referrerPolicy="no-referrer" alt={file.quality} className="w-full h-full object-cover transition duration-500 group-hover:opacity-60" />
+                                  <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent opacity-90 pointer-events-none" />
+                                  <div className="absolute top-3 left-3 px-3 py-1 bg-black/60 backdrop-blur-md border border-white/10 rounded-lg text-[11px] font-bold uppercase text-zinc-200 shadow-xl">
+                                    {file.quality}
+                                  </div>
+                                </div>
+                                <div className="absolute bottom-0 left-0 right-0 p-4 flex justify-between items-center bg-zinc-950/40 backdrop-blur-sm border-t border-white/5">
+                                  <div className="min-w-0 pr-2">
+                                    <p className="text-[10px] text-zinc-400 uppercase font-bold tracking-wider truncate">{file.extension} {file.size ? `• ${file.size}` : ""}</p>
+                                  </div>
+                                  <button onClick={() => handleDownloadNative(file.url, safeFileName)} className="w-11 h-11 flex items-center justify-center bg-white text-zinc-950 rounded-full hover:bg-zinc-200 transition-all shadow-xl" title={`Download ${file.quality}`}>
+                                    <Download size={20} strokeWidth={2.5} />
+                                  </button>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+
+                      {/* AREA 2: Daftar Horizontal Khusus Video dan Audio */}
+                      {mediaFiles.length > 0 && (
+                        <div className="flex flex-col gap-3">
+                          {mediaFiles.map((file) => {
+                            const isAudio = ["mp3", "m4a"].includes(file.extension);
+                            const safeFileName = `${sanitizeClientFileName(result.author)}-${sanitizeClientFileName(file.quality)}.${file.extension}`;
+
+                            return (
+                              <div key={file.id} className="flex items-center justify-between p-3 border border-zinc-800 rounded-xl bg-zinc-950/50 hover:bg-zinc-800 transition group text-left">
+                                <div className="flex items-center gap-4 min-w-0 pr-2">
+                                  <div className="w-12 h-12 shrink-0 rounded-lg bg-zinc-900 flex items-center justify-center overflow-hidden border border-zinc-800">
+                                    {isAudio ? <Music size={22} className="text-zinc-500" /> : <FileVideo size={22} className="text-zinc-500" />}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-semibold truncate text-zinc-200">{file.quality}</p>
+                                    <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">{file.extension} {file.size ? `• ${file.size}` : ""}</p>
+                                  </div>
+                                </div>
+                                <button onClick={() => handleDownloadNative(file.url, safeFileName)} className="p-3 mr-1 rounded-xl bg-white text-zinc-950 hover:scale-105 transition-transform shadow-md" title={`Unduh ${file.quality}`}>
+                                  <Download size={18} strokeWidth={2.5} />
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
 
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* Bagian Supported Social Media */}
+          {/* Supported Social Media Info */}
           <div className="max-w-2xl mx-auto mb-6 text-left">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-[11px] font-medium text-zinc-500">
               <Globe2 size={12}/> Supported Social Media
