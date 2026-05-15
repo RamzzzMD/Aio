@@ -172,7 +172,7 @@ export default function Page() {
             <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-zinc-900 p-8 rounded-3xl border border-zinc-800 relative max-w-xs w-full text-center">
               <button onClick={() => setShowQris(false)} className="absolute right-4 top-4 text-zinc-500 hover:text-white transition-colors"><X /></button>
               <h3 className="font-bold mb-4 text-white">Donasi QRIS</h3>
-              <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=RanzzDonation" className="mx-auto rounded-xl mb-4 bg-white p-2 shadow-inner" />
+              <img src="https://raw.githubusercontent.com/kamdjut-ui/uploader/refs/heads/main/uploads/1774444884166_QRIS_(1).jpeg" className="mx-auto rounded-xl mb-4 bg-white p-2 shadow-inner" />
               <p className="text-xs text-zinc-500 italic">Dukungan Anda sangat berarti.</p>
             </motion.div>
           </motion.div>
@@ -317,8 +317,8 @@ export default function Page() {
               </div>
             </div>
             <div className="flex flex-wrap justify-center gap-3">
-              <a href="https://wa.me/628123456789" className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl hover:text-green-400 hover:border-green-500/50 transition-colors"><MessageCircle size={20}/></a>
-              <a href="https://t.me/Ranzz" className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl hover:text-sky-400 hover:border-sky-500/50 transition-colors"><Send size={20}/></a>
+              <a href="https://wa.me/6281214300828" className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl hover:text-green-400 hover:border-green-500/50 transition-colors"><MessageCircle size={20}/></a>
+              <a href="https://t.me/cangcuthideung" className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl hover:text-sky-400 hover:border-sky-500/50 transition-colors"><Send size={20}/></a>
               <a href="https://github.com/RamzzzMD" className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl hover:text-white hover:border-white/50 transition-colors"><GithubIcon size={20}/></a>
               <button onClick={()=>setShowQris(true)} className="flex items-center gap-2 px-5 bg-zinc-900 border border-zinc-800 rounded-xl hover:text-yellow-400 hover:border-yellow-500/50 transition-colors"><QrCode size={20}/> <span className="text-xs font-bold uppercase tracking-widest">Donasi</span></button>
             </div>
