@@ -3,17 +3,18 @@ import { NextResponse } from "next/server";
 export const runtime = "nodejs";
 
 function sanitizeFileName(name) {
-  return String(name || "download")
+  return String(name || "media.mp4")
     .replace(/[<>:"/\\|?*\x00-\x1F]/g, "")
     .replace(/\s+/g, "-")
-    .slice(0, 80);
+    // Memperbesar batas limit ke 200 agar ekstensi (.mp4/.jpg) di akhir tidak ikut terpotong
+    .slice(0, 200); 
 }
 
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const targetUrl = searchParams.get("url");
-    const fileName = sanitizeFileName(searchParams.get("name") || "media");
+    const fileName = sanitizeFileName(searchParams.get("name"));
 
     if (!targetUrl) throw new Error("URL file tidak ditemukan.");
 
@@ -45,15 +46,12 @@ export async function GET(request) {
     const contentType = upstream.headers.get("content-type") || "application/octet-stream";
     const contentLength = upstream.headers.get("content-length");
 
-    // PERBAIKAN EMOJI: 
-    // 1. Buat nama fallback yang hanya berisi huruf/angka (tanpa emoji) untuk browser lama
-    const safeFallbackName = fileName.replace(/[^\x20-\x7E]/g, "") || "media.mp4";
-    // 2. Encode nama file yang asli (berisi emoji) menggunakan UTF-8
+    // Pastikan nama fallback aman dari karakter aneh, namun tetap menyisakan format
+    const safeFallbackName = fileName.replace(/[^\x20-\x7E]/g, ""); 
     const encodedFileName = encodeURIComponent(fileName);
 
     const responseHeaders = {
       "Content-Type": contentType,
-      // Gunakan filename*=UTF-8'' agar emoji didukung saat didownload
       "Content-Disposition": `attachment; filename="${safeFallbackName}"; filename*=UTF-8''${encodedFileName}`,
       "Cache-Control": "no-store",
     };
