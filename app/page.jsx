@@ -10,6 +10,7 @@ import {
   Copy,
   Download,
   FileVideo,
+  Globe2,
   HelpCircle,
   Link2,
   Loader2,
@@ -20,6 +21,7 @@ import {
   Send,
   ShieldCheck,
   UserRound,
+  Video,
   X,
 } from "lucide-react";
 import { Toaster, toast } from "sonner";
@@ -41,10 +43,7 @@ const faqs = [
 ];
 
 function sanitizeClientFileName(value) {
-  return String(value || "media")
-    .replace(/[<>:"/\\|?*\x00-\x1F]/g, "")
-    .replace(/\s+/g, "-")
-    .slice(0, 120); // Diubah dari 70 menjadi 120 agar lebih aman
+  return String(value || "media").replace(/[<>:"/\\|?*\x00-\x1F]/g, "").replace(/\s+/g, "-").slice(0, 120);
 }
 
 function pick(...values) { return values.find((v) => typeof v === "string" && v.trim().length > 0); }
@@ -52,21 +51,36 @@ function pick(...values) { return values.find((v) => typeof v === "string" && v.
 function detectExtension(url = "", type = "") {
   const lowerUrl = url.toLowerCase();
   const lowerType = type.toLowerCase();
-  
   if (lowerType.includes("audio") || lowerUrl.includes(".mp3") || lowerUrl.includes(".m4a")) return "mp3";
   if (lowerType.includes("image") || lowerUrl.includes(".jpg") || lowerUrl.includes(".jpeg") || lowerUrl.includes(".png") || lowerUrl.includes(".webp") || lowerUrl.includes("~tplv-")) return "jpg";
   if (lowerUrl.includes(".mov")) return "mov";
-  
   return "mp4";
 }
 
+// PERBAIKAN: Menarik Foto Profil, Caption Penuh, dan Hashtags
 function normalizeApiResponse(apiData) {
   const root = apiData?.data || apiData?.result || apiData || {};
-  const title = pick(root.title, root.caption, root.description, root.text) || "Untitled Media";
-  const author = pick(root.author, root.uploader, root.username) || "Unknown Creator";
-  const thumbnail = pick(root.thumbnail, root.thumb, root.cover) || "";
+  
+  const caption = pick(root.caption, root.description, root.text, root.title) || "Media berhasil diekstrak.";
+  const author = pick(root.author?.nickname, root.author?.name, root.author, root.uploader, root.username) || "Unknown Creator";
   const source = pick(root.source, root.platform) || "Social Media";
   
+  // Mencari Foto Profil Kreator
+  const authorAvatar = pick(
+    root.author_avatar, 
+    root.author?.avatar_thumb, 
+    root.author?.avatar, 
+    root.user?.avatar, 
+    root.avatar
+  ) || "";
+
+  // Ekstrak Tags/Hashtags (Jika ada array tags dari API, pakai itu. Jika tidak, regex dari caption)
+  let tags = Array.isArray(root.tags) ? root.tags : [];
+  if (!tags.length && typeof caption === "string") {
+    const matched = caption.match(/#[\w]+/g);
+    if (matched) tags = matched;
+  }
+
   const possibleDownloads = root.images || root.medias || root.media || root.links || root.downloads || [];
   let downloads = Array.isArray(possibleDownloads) && possibleDownloads.length > 0 ? [...possibleDownloads] : [];
 
@@ -82,7 +96,6 @@ function normalizeApiResponse(apiData) {
   const mapped = downloads.map((item, index) => {
     const entry = typeof item === "string" ? { url: item } : item || {};
     const fileUrl = pick(entry.url, entry.link, entry.downloadUrl, entry.src);
-    
     if (!fileUrl) return null;
 
     const detectedType = entry.type || "";
@@ -98,7 +111,6 @@ function normalizeApiResponse(apiData) {
         qualityLabel = `File ${index + 1}`;
       }
     }
-
     if (entry.quality === "Audio/Music") qualityLabel = "Audio/Music";
 
     return {
@@ -112,7 +124,7 @@ function normalizeApiResponse(apiData) {
 
   const uniqueMapped = Array.from(new Map(mapped.map(item => [item.url, item])).values());
 
-  return { title, author, thumbnail, source, downloads: uniqueMapped };
+  return { caption, author, authorAvatar, tags, source, downloads: uniqueMapped };
 }
 
 export default function Page() {
@@ -169,10 +181,10 @@ export default function Page() {
       <AnimatePresence>
         {showQris && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowQris(false)} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-zinc-900 p-8 rounded-3xl border border-zinc-800 relative max-w-xs w-full text-center">
+            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-zinc-900 p-8 rounded-3xl border border-zinc-800 relative max-w-xs w-full text-center shadow-2xl">
               <button onClick={() => setShowQris(false)} className="absolute right-4 top-4 text-zinc-500 hover:text-white transition-colors"><X /></button>
               <h3 className="font-bold mb-4 text-white">Donasi QRIS</h3>
-              <img src="https://raw.githubusercontent.com/kamdjut-ui/uploader/refs/heads/main/uploads/1774444884166_QRIS_(1).jpeg" className="mx-auto rounded-xl mb-4 bg-white p-2 shadow-inner" />
+              <img src="https://raw.githubusercontent.com/kamdjut-ui/uploader/refs/heads/main/uploads/1774444884166_QRIS_(1).jpeg" className="mx-auto rounded-xl mb-4 bg-white p-2 shadow-inner" alt="QRIS Donasi" />
               <p className="text-xs text-zinc-500 italic">Dukungan Anda sangat berarti.</p>
             </motion.div>
           </motion.div>
@@ -192,14 +204,14 @@ export default function Page() {
           </h1>
           
           {/* Form Input */}
-          <form onSubmit={handleSubmit} className="mb-12">
+          <form onSubmit={handleSubmit} className="mb-12 max-w-2xl mx-auto">
             <div className="bg-zinc-900/50 border border-zinc-800 p-2 rounded-2xl flex flex-col sm:flex-row gap-2 transition-colors focus-within:border-zinc-600">
               <div className="flex flex-1 items-center gap-2 bg-transparent px-3">
                 <Link2 className="text-zinc-400 shrink-0" size={20} />
                 <input 
                   value={url} 
                   onChange={(e)=>setUrl(e.target.value)} 
-                  placeholder="Paste URL here..." 
+                  placeholder="Paste URL (TikTok, IG, YT, dll)..." 
                   className="bg-transparent flex-1 py-3 outline-none text-sm md:text-base text-zinc-100 placeholder:text-zinc-600" 
                 />
                 
@@ -223,83 +235,102 @@ export default function Page() {
                 )}
               </div>
               
-              <button disabled={loading} className="bg-white text-zinc-950 px-8 py-3 rounded-xl font-bold hover:bg-zinc-200 transition disabled:opacity-50">
-                {loading ? <Loader2 className="animate-spin inline" size={20}/> : "Extract"}
+              <button disabled={loading} className="bg-white text-zinc-950 px-8 py-3 rounded-xl font-bold hover:bg-zinc-200 transition disabled:opacity-50 flex items-center justify-center">
+                {loading ? <Loader2 className="animate-spin mr-2" size={20}/> : "Extract"}
               </button>
             </div>
           </form>
 
-          {/* Result Card (Gallery Grid Mode) */}
+          {/* Result Card (Redesign ala Postingan Social Media Asli) */}
           <AnimatePresence>
             {result && (
-              <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="bg-zinc-900 border border-zinc-800 p-5 sm:p-7 rounded-3xl text-left mb-12 shadow-2xl">
+              <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="bg-zinc-900 border border-zinc-800 p-5 sm:p-7 rounded-3xl text-left mb-12 shadow-2xl max-w-2xl mx-auto">
                 
-                {/* Bagian Header Media */}
-                <div className="flex items-center gap-5 mb-6 pb-6 border-b border-zinc-800">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-zinc-950 rounded-2xl overflow-hidden shrink-0 border border-zinc-800 shadow-inner">
-                    {result.thumbnail ? (
-                      <img src={result.thumbnail} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                {/* Header: Profil Creator & Source Badge */}
+                <div className="flex justify-between items-start mb-5">
+                  <div className="flex items-center gap-3">
+                    {result.authorAvatar ? (
+                      <img src={result.authorAvatar} alt={result.author} referrerPolicy="no-referrer" className="w-12 h-12 rounded-full object-cover border border-zinc-700 bg-zinc-800 shadow-sm" />
                     ) : (
-                      <PlayCircle className="m-auto mt-5 sm:mt-7 text-zinc-700" />
+                      <div className="w-12 h-12 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center shadow-sm">
+                        <UserRound size={24} className="text-zinc-500" />
+                      </div>
                     )}
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest bg-zinc-800/50 border border-zinc-700/50 px-2.5 py-1 rounded-md">{result.source}</span>
-                    <h2 className="text-lg sm:text-2xl font-bold line-clamp-2 mt-2.5 text-white">{result.title}</h2>
-                    <p className="text-xs sm:text-sm text-zinc-500 mt-1.5">Kreator: <span className="text-zinc-300 font-medium">{result.author}</span></p>
+                    <div>
+                      <h3 className="text-base font-bold text-white line-clamp-1">{result.author}</h3>
+                      <p className="text-xs text-zinc-500 flex items-center gap-1 mt-0.5 font-medium">
+                        <Globe2 size={12}/> {result.source}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
-                {/* Bagian Grid Galeri */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                  {result.downloads.map((file, i) => {
-                    const isImage = file.extension === 'jpg' || file.extension === 'png' || file.extension === 'webp';
-                    const isVideo = file.extension === 'mp4' || file.extension === 'mov';
-                    const isAudio = file.extension === 'mp3' || file.extension === 'm4a';
+                {/* Body: Caption & Hashtags */}
+                <div className="mb-6">
+                  <p className="text-sm sm:text-base text-zinc-300 leading-relaxed line-clamp-4 whitespace-pre-wrap">
+                    {result.caption}
+                  </p>
+                  
+                  {result.tags && result.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {result.tags.slice(0, 15).map((tag, i) => {
+                        // Memastikan hashtag memiliki format yang benar
+                        const displayTag = tag.startsWith('#') ? tag : `#${tag}`;
+                        return (
+                          <span key={i} className="text-[11px] font-semibold text-cyan-400 bg-cyan-400/10 px-2.5 py-1 rounded-md border border-cyan-400/10">
+                            {displayTag}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
 
-                    // Gunakan gambar aslinya jika itu slide foto, atau thumbnail jika itu video
-                    const previewSrc = isImage ? file.url : (isVideo ? result.thumbnail : null);
-                    // Nama file unik per item
-                    const safeFileName = `${sanitizeClientFileName(result.title)}-${sanitizeClientFileName(file.quality)}.${file.extension}`;
+                <div className="w-full h-px bg-zinc-800 mb-6" /> {/* Divider */}
 
-                    return (
-                      <div key={file.id} className="group relative rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 aspect-[3/4] flex flex-col shadow-lg">
-                        
-                        {/* Area Thumbnail */}
-                        <div className="flex-1 relative w-full h-full bg-zinc-900 flex items-center justify-center overflow-hidden">
-                          {previewSrc ? (
-                            <img src={previewSrc} referrerPolicy="no-referrer" alt={file.quality} className="w-full h-full object-cover transition duration-500 group-hover:scale-110 group-hover:opacity-60" />
-                          ) : (
-                            isAudio ? <Music size={32} className="text-zinc-700" /> : <FileVideo size={32} className="text-zinc-700" />
-                          )}
+                {/* Footer: Download Grid */}
+                <div>
+                  <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-3">Tersedia untuk Diunduh</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
+                    {result.downloads.map((file, i) => {
+                      const isImage = ["jpg", "jpeg", "png", "webp"].includes(file.extension);
+                      const isAudio = ["mp3", "m4a"].includes(file.extension);
+                      const safeFileName = `${sanitizeClientFileName(result.author)}-${sanitizeClientFileName(file.quality)}.${file.extension}`;
+
+                      return (
+                        <div key={file.id} className="flex items-center justify-between p-2 pl-3 border border-zinc-800 rounded-xl bg-zinc-950/50 hover:bg-zinc-800 transition group text-left">
                           
-                          {/* Gradient pelindung agar teks terbaca */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/20 to-transparent opacity-90 pointer-events-none" />
-                          
-                          {/* Label Kualitas/Slide */}
-                          <div className="absolute top-3 left-3 px-2.5 py-1 bg-black/60 backdrop-blur-md border border-white/10 rounded-lg text-[10px] font-bold uppercase text-zinc-200 shadow-xl pointer-events-none">
-                            {file.quality}
+                          {/* Info Media Kiri */}
+                          <div className="flex items-center gap-3 min-w-0 pr-2">
+                            <div className="w-10 h-10 shrink-0 rounded-lg bg-zinc-900 flex items-center justify-center overflow-hidden border border-zinc-800">
+                              {isImage ? (
+                                <img src={file.url} alt="Slide Preview" className="w-full h-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
+                              ) : isAudio ? (
+                                <Music size={18} className="text-zinc-500" />
+                              ) : (
+                                <Video size={18} className="text-zinc-500" />
+                              )}
+                            </div>
+                            
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold truncate text-zinc-200">{file.quality}</p>
+                              <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">{file.extension} {file.size ? `• ${file.size}` : ""}</p>
+                            </div>
                           </div>
-                        </div>
 
-                        {/* Area Aksi Tombol */}
-                        <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 flex justify-between items-end pointer-events-none">
-                          <div className="min-w-0 pr-2">
-                            <p className="text-[10px] text-zinc-400 uppercase font-bold tracking-wider">{file.extension} {file.size ? `• ${file.size}` : ""}</p>
-                          </div>
-                          
+                          {/* Tombol Unduh Kanan */}
                           <button 
                             onClick={() => handleDownloadNative(file.url, safeFileName)} 
-                            className="w-10 h-10 flex items-center justify-center bg-white text-zinc-950 rounded-full hover:scale-110 hover:bg-zinc-200 transition-all shadow-xl pointer-events-auto"
-                            title={`Download ${file.quality}`}
+                            className="p-2.5 mr-1 rounded-lg bg-white text-zinc-950 hover:scale-105 transition-transform shadow-md"
+                            title={`Unduh ${file.quality}`}
                           >
-                            <Download size={18} />
+                            <Download size={16} strokeWidth={2.5} />
                           </button>
-                        </div>
 
-                      </div>
-                    )
-                  })}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
               </motion.div>
