@@ -41,7 +41,10 @@ const faqs = [
 ];
 
 function sanitizeClientFileName(value) {
-  return String(value || "media").replace(/[<>:"/\\|?*\x00-\x1F]/g, "").replace(/\s+/g, "-").slice(0, 70);
+  return String(value || "media")
+    .replace(/[<>:"/\\|?*\x00-\x1F]/g, "")
+    .replace(/\s+/g, "-")
+    .slice(0, 120); // Diubah dari 70 menjadi 120 agar lebih aman
 }
 
 function pick(...values) { return values.find((v) => typeof v === "string" && v.trim().length > 0); }
