@@ -9,7 +9,7 @@ import {
   Clipboard,
   Copy,
   Download,
-  Eraser, // Tambahan: Ikon Hapus
+  Eraser,
   FileVideo,
   Globe2,
   HelpCircle,
@@ -22,7 +22,6 @@ import {
   Send,
   ShieldCheck,
   UserRound,
-  Video,
   X,
 } from "lucide-react";
 import { Toaster, toast } from "sonner";
@@ -217,7 +216,6 @@ export default function Page() {
                   <Clipboard size={18} />
                 </button>
 
-                {/* Tombol Hapus (Muncul saat ada text) */}
                 {url && (
                   <button 
                     type="button" 
@@ -255,6 +253,7 @@ export default function Page() {
             {result && (
               <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="bg-zinc-900 border border-zinc-800 p-5 sm:p-7 rounded-3xl text-left mb-12 shadow-2xl max-w-2xl mx-auto">
                 
+                {/* Profil Header */}
                 <div className="flex justify-between items-start mb-5">
                   <div className="flex items-center gap-3">
                     {result.authorAvatar ? (
@@ -273,6 +272,7 @@ export default function Page() {
                   </div>
                 </div>
 
+                {/* Caption & Tags */}
                 <div className="mb-6">
                   <p className="text-sm sm:text-base text-zinc-300 leading-relaxed line-clamp-4 whitespace-pre-wrap">
                     {result.caption}
@@ -294,22 +294,25 @@ export default function Page() {
 
                 <div className="w-full h-px bg-zinc-800 mb-6" />
 
+                {/* Grid Item Download */}
                 <div>
                   <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-3">Tersedia untuk Diunduh</h4>
-                  {/* Grid Galeri Diperbesar (2 Kolom) */}
+                  
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
                     {result.downloads.map((file, i) => {
                       const isImage = file.extension === 'jpg' || file.extension === 'png' || file.extension === 'webp';
-                      const isVideo = file.extension === 'mp4' || file.extension === 'mov';
                       const isAudio = file.extension === 'mp3' || file.extension === 'm4a';
 
-                      const previewSrc = isImage ? file.url : (isVideo ? result.thumbnail : null);
+                      // PERBAIKAN: Hanya munculkan url file gambar sebagai previewSrc jika tipe file-nya adalah gambar.
+                      // Jika video atau musik, previewSrc dibuat `null` agar menampikan ikon.
+                      const previewSrc = isImage ? file.url : null;
                       const safeFileName = `${sanitizeClientFileName(result.author)}-${sanitizeClientFileName(file.quality)}.${file.extension}`;
 
                       return (
                         <div key={file.id} className="group relative rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 aspect-[4/5] flex flex-col shadow-lg transition-transform hover:scale-[1.02]">
                           
                           <div className="flex-1 relative w-full h-full bg-zinc-900 flex items-center justify-center overflow-hidden">
+                            {/* Hanya render gambar (<img>) jika itu benar-benar gambar. Sisanya tampilkan ikon. */}
                             {previewSrc ? (
                               <img src={previewSrc} referrerPolicy="no-referrer" alt={file.quality} className="w-full h-full object-cover transition duration-500 group-hover:opacity-60" />
                             ) : (
@@ -347,7 +350,7 @@ export default function Page() {
             )}
           </AnimatePresence>
 
-          {/* Supported Social Media Info */}
+          {/* Bagian Supported Social Media */}
           <div className="max-w-2xl mx-auto mb-6 text-left">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-[11px] font-medium text-zinc-500">
               <Globe2 size={12}/> Supported Social Media
@@ -372,7 +375,7 @@ export default function Page() {
             </div>
             <div className="flex flex-wrap justify-center gap-3">
               <a href="https://wa.me/6281214300828" className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl hover:text-green-400 hover:border-green-500/50 transition-colors"><MessageCircle size={20}/></a>
-              <a href="https://t.me/cancuthideung" className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl hover:text-sky-400 hover:border-sky-500/50 transition-colors"><Send size={20}/></a>
+              <a href="https://t.me/cangcuthideung" className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl hover:text-sky-400 hover:border-sky-500/50 transition-colors"><Send size={20}/></a>
               <a href="https://github.com/RamzzzMD" className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl hover:text-white hover:border-white/50 transition-colors"><GithubIcon size={20}/></a>
               <button onClick={()=>setShowQris(true)} className="flex items-center gap-2 px-5 bg-zinc-900 border border-zinc-800 rounded-xl hover:text-yellow-400 hover:border-yellow-500/50 transition-colors"><QrCode size={20}/> <span className="text-xs font-bold uppercase tracking-widest">Donasi</span></button>
             </div>
