@@ -174,13 +174,14 @@ export default function Page() {
   }
 
   return (
-    <main className="relative min-h-screen bg-[#09090b] text-zinc-100 p-6">
+    <main className="relative min-h-screen bg-[#09090b] text-zinc-100 p-6 overflow-hidden">
       <Toaster richColors theme="dark" position="top-center" />
 
+      {/* Modal QRIS Animasi */}
       <AnimatePresence>
         {showQris && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowQris(false)} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-zinc-900 p-8 rounded-3xl border border-zinc-800 relative max-w-xs w-full text-center shadow-2xl">
+            <motion.div initial={{ scale: 0.8, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 10 }} transition={{ type: "spring", damping: 20, stiffness: 300 }} className="bg-zinc-900 p-8 rounded-3xl border border-zinc-800 relative max-w-xs w-full text-center shadow-2xl">
               <button onClick={() => setShowQris(false)} className="absolute right-4 top-4 text-zinc-500 hover:text-white transition-colors"><X /></button>
               <h3 className="font-bold mb-4 text-white">Donasi QRIS</h3>
               <img src="https://raw.githubusercontent.com/kamdjut-ui/uploader/refs/heads/main/uploads/1774444884166_QRIS_(1).jpeg" className="mx-auto rounded-xl mb-4 bg-white p-2 shadow-inner" alt="QRIS Donasi" />
@@ -191,18 +192,37 @@ export default function Page() {
       </AnimatePresence>
 
       <div className="max-w-4xl mx-auto flex flex-col min-h-screen">
-        <nav className="flex justify-between items-center border-b border-zinc-800 pb-6 mb-12">
+        {/* Navbar Animasi dari atas */}
+        <motion.nav 
+          initial={{ opacity: 0, y: -20 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="flex justify-between items-center border-b border-zinc-800 pb-6 mb-12"
+        >
           <div className="flex items-center gap-2 font-bold"><ArrowDownToLine className="text-zinc-950 bg-zinc-100 p-1 rounded-md" /> Ranzz Downloader</div>
           <div className="text-xs text-zinc-500 flex items-center gap-1"><ShieldCheck size={14}/> Secure</div>
-        </nav>
+        </motion.nav>
 
         <div className="text-center flex-1">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6 tracking-tight text-white">
+          {/* Judul Muncul Halus dari bawah */}
+          <motion.h1 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
+            className="text-4xl md:text-6xl font-bold mb-6 tracking-tight text-white"
+          >
             Download <span className="text-zinc-500">ALL</span> Social Media.
-          </h1>
+          </motion.h1>
           
-          <form onSubmit={handleSubmit} className="mb-12 max-w-2xl mx-auto">
-            <div className="bg-zinc-900/50 border border-zinc-800 p-2 rounded-2xl flex flex-col sm:flex-row gap-2 transition-colors focus-within:border-zinc-600">
+          {/* Form Animasi Zoom/Scale In */}
+          <motion.form 
+            initial={{ opacity: 0, scale: 0.95, y: 20 }} 
+            animate={{ opacity: 1, scale: 1, y: 0 }} 
+            transition={{ duration: 0.5, delay: 0.2, type: "spring", bounce: 0.4 }}
+            onSubmit={handleSubmit} 
+            className="mb-12 max-w-2xl mx-auto"
+          >
+            <div className="bg-zinc-900/50 border border-zinc-800 p-2 rounded-2xl flex flex-col sm:flex-row gap-2 transition-colors focus-within:border-zinc-600 shadow-lg">
               <div className="flex flex-1 items-center gap-1 bg-transparent px-3">
                 <Link2 className="text-zinc-400 shrink-0" size={20} />
                 <input 
@@ -216,42 +236,55 @@ export default function Page() {
                   <Clipboard size={18} />
                 </button>
 
-                {url && (
-                  <button 
-                    type="button" 
-                    onClick={() => setUrl("")} 
-                    className="p-2 text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition"
-                    title="Hapus Teks"
-                  >
-                    <Eraser size={18} />
-                  </button>
-                )}
+                <AnimatePresence>
+                  {url && (
+                    <motion.button 
+                      initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0 }}
+                      type="button" 
+                      onClick={() => setUrl("")} 
+                      className="p-2 text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition"
+                      title="Hapus Teks"
+                    >
+                      <Eraser size={18} />
+                    </motion.button>
+                  )}
+                </AnimatePresence>
 
-                {url && (
-                  <button 
-                    type="button" 
-                    onClick={() => {
-                      navigator.clipboard.writeText(url);
-                      setCopied(true);
-                      toast.success("Disalin ke clipboard.");
-                      setTimeout(() => setCopied(false), 1200);
-                    }} 
-                    className="p-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg transition"
-                  >
-                    {copied ? <CheckCircle2 size={18} className="text-green-500" /> : <Copy size={18} />}
-                  </button>
-                )}
+                <AnimatePresence>
+                  {url && (
+                    <motion.button 
+                      initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0 }}
+                      type="button" 
+                      onClick={() => {
+                        navigator.clipboard.writeText(url);
+                        setCopied(true);
+                        toast.success("Disalin ke clipboard.");
+                        setTimeout(() => setCopied(false), 1200);
+                      }} 
+                      className="p-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg transition"
+                    >
+                      {copied ? <CheckCircle2 size={18} className="text-green-500" /> : <Copy size={18} />}
+                    </motion.button>
+                  )}
+                </AnimatePresence>
               </div>
               
               <button disabled={loading} className="bg-white text-zinc-950 px-8 py-3 rounded-xl font-bold hover:bg-zinc-200 transition disabled:opacity-50 flex items-center justify-center">
                 {loading ? <Loader2 className="animate-spin mr-2" size={20}/> : "Extract"}
               </button>
             </div>
-          </form>
+          </motion.form>
 
+          {/* Animasi Hasil Extract - Tampil Halus */}
           <AnimatePresence>
             {result && (
-              <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="bg-zinc-900 border border-zinc-800 p-5 sm:p-7 rounded-3xl text-left mb-12 shadow-2xl max-w-2xl mx-auto">
+              <motion.div 
+                initial={{ opacity: 0, y: 30, scale: 0.98 }} 
+                animate={{ opacity: 1, y: 0, scale: 1 }} 
+                exit={{ opacity: 0, scale: 0.95, y: -10 }} 
+                transition={{ duration: 0.4, type: "spring", bounce: 0.3 }}
+                className="bg-zinc-900 border border-zinc-800 p-5 sm:p-7 rounded-3xl text-left mb-12 shadow-2xl max-w-2xl mx-auto"
+              >
                 
                 <div className="flex justify-between items-start mb-5">
                   <div className="flex items-center gap-3">
@@ -277,16 +310,16 @@ export default function Page() {
                   </p>
                   
                   {result.tags && result.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-3">
+                    <motion.div initial="hidden" animate="visible" variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.05 } } }} className="flex flex-wrap gap-2 mt-3">
                       {result.tags.slice(0, 15).map((tag, i) => {
                         const displayTag = tag.startsWith('#') ? tag : `#${tag}`;
                         return (
-                          <span key={i} className="text-[11px] font-semibold text-cyan-400 bg-cyan-400/10 px-2.5 py-1 rounded-md border border-cyan-400/10">
+                          <motion.span variants={{ hidden: { opacity: 0, scale: 0.8 }, visible: { opacity: 1, scale: 1 } }} key={i} className="text-[11px] font-semibold text-cyan-400 bg-cyan-400/10 px-2.5 py-1 rounded-md border border-cyan-400/10">
                             {displayTag}
-                          </span>
+                          </motion.span>
                         );
                       })}
-                    </div>
+                    </motion.div>
                   )}
                 </div>
 
@@ -373,8 +406,14 @@ export default function Page() {
             )}
           </AnimatePresence>
 
-          {/* Supported Social Media Info */}
-          <div className="max-w-2xl mx-auto mb-6 text-left">
+          {/* Animasi Supported Social Media muncul saat discroll */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }} 
+            whileInView={{ opacity: 1, y: 0 }} 
+            viewport={{ once: true, margin: "-50px" }}
+            transition={{ duration: 0.5 }}
+            className="max-w-2xl mx-auto mb-6 text-left"
+          >
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-[11px] font-medium text-zinc-500">
               <Globe2 size={12}/> Supported Social Media
             </div>
@@ -385,9 +424,16 @@ export default function Page() {
                 </span>
               ))}
             </div>
-          </div>
+          </motion.div>
 
-          <div className="bg-zinc-900/30 border border-zinc-800 p-6 sm:p-8 rounded-3xl text-left flex flex-col md:flex-row justify-between items-center gap-6 mb-16">
+          {/* Animasi Info Dev */}
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }} 
+            whileInView={{ opacity: 1, scale: 1 }} 
+            viewport={{ once: true, margin: "-50px" }}
+            transition={{ duration: 0.6, delay: 0.1, type: "spring", bounce: 0.3 }}
+            className="bg-zinc-900/30 border border-zinc-800 p-6 sm:p-8 rounded-3xl text-left flex flex-col md:flex-row justify-between items-center gap-6 mb-16"
+          >
             <div className="flex gap-5 items-center">
               <div className="w-16 h-16 bg-zinc-800 rounded-2xl flex items-center justify-center shadow-inner"><UserRound size={28} className="text-zinc-400"/></div>
               <div>
@@ -402,19 +448,35 @@ export default function Page() {
               <a href="https://github.com/RamzzzMD" className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl hover:text-white hover:border-white/50 transition-colors"><GithubIcon size={20}/></a>
               <button onClick={()=>setShowQris(true)} className="flex items-center gap-2 px-5 bg-zinc-900 border border-zinc-800 rounded-xl hover:text-yellow-400 hover:border-yellow-500/50 transition-colors"><QrCode size={20}/> <span className="text-xs font-bold uppercase tracking-widest">Donasi</span></button>
             </div>
-          </div>
+          </motion.div>
 
-          <section className="text-left mb-16">
-            <h2 className="text-2xl font-bold mb-6 flex items-center gap-3 text-white"><HelpCircle className="text-zinc-500" /> Pertanyaan Umum</h2>
+          {/* Animasi FAQ List (Staggered) */}
+          <motion.section 
+            initial="hidden" 
+            whileInView="visible" 
+            viewport={{ once: true, margin: "-50px" }}
+            variants={{
+              hidden: { opacity: 0 },
+              visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+            }}
+            className="text-left mb-16"
+          >
+            <motion.h2 variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }} className="text-2xl font-bold mb-6 flex items-center gap-3 text-white">
+              <HelpCircle className="text-zinc-500" /> Pertanyaan Umum
+            </motion.h2>
             <div className="grid gap-3">
               {faqs.map((faq, i) => (
-                <div key={i} className="p-5 sm:p-6 border border-zinc-800 rounded-2xl bg-zinc-900/30 hover:bg-zinc-900/50 transition-colors">
+                <motion.div 
+                  key={i} 
+                  variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
+                  className="p-5 sm:p-6 border border-zinc-800 rounded-2xl bg-zinc-900/30 hover:bg-zinc-900/50 transition-colors"
+                >
                   <h4 className="font-semibold text-zinc-200 text-base">{faq.question}</h4>
                   <p className="text-sm text-zinc-400 mt-2 leading-relaxed">{faq.answer}</p>
-                </div>
+                </motion.div>
               ))}
             </div>
-          </section>
+          </motion.section>
 
           <footer className="border-t border-zinc-800 pt-8 pb-10">
             <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">© {new Date().getFullYear()} Ranzz Downloader. All rights reserved.</p>
