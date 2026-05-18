@@ -1,8 +1,7 @@
 import axios from "axios";
 import { NextResponse } from "next/server";
-import { chromium } from "playwright";
 
-export const runtime = "nodejs"; // Wajib nodejs karena menggunakan Playwright
+export const runtime = "nodejs";
 
 // Fungsi validasi dasar
 function validateUrl(value) {
@@ -49,12 +48,8 @@ async function downr(url) {
         'cookie': headers['set-cookie']?.join('; ') || '',
         'origin': 'https://downr.org',
         'referer': 'https://downr.org/',
-        'sec-ch-ua': '"Chromium";v="137", "Not/A)Brand";v="24"',
-        'sec-ch-ua-mobile': '?1',
+        'sec-ch-ua': '"Chromium";v="137"',
         'sec-ch-ua-platform': '"Android"',
-        'sec-fetch-dest': 'empty',
-        'sec-fetch-mode': 'cors',
-        'sec-fetch-site': 'same-origin',
         'user-agent': 'Mozilla/5.0 (Linux; Android 15; SM-F958 Build/AP3A.240905.015) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.86 Mobile Safari/537.36'
       }
     });
@@ -98,48 +93,56 @@ async function loveThreadsDownloader(threadsUrl) {
     throw new Error("Gagal menemukan media di Threads. Pastikan link valid.");
   }
 
-  // Format array URL string menjadi array objek agar cocok dengan normalizer frontend
   return {
     platform: "Threads",
     downloads: downloadLinks.map(url => ({ url: url }))
   };
 }
 
-// 3. Scraper Pinterest (Pindown)
+// 3. Scraper Pinterest (Pindown via Axios, Tanpa Playwright)
 async function pindownDownloader(pinUrl) {
-  let browser;
   try {
-    browser = await chromium.launch({ headless: true })
-    const context = await browser.newContext({
-      userAgent: "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Mobile Safari/537.36"
-    })
-    
-    const page = await context.newPage()
-    await page.goto("https://pindown.io/en1", { waitUntil: "networkidle" })
-    await page.fill('input[name="url"]', pinUrl)
-    
-    const [response] = await Promise.all([
-      page.waitForResponse(r => r.url().includes("/action")),
-      page.click('button[type="submit"]')
-    ])
-    
-    const result = await response.json()
+    // a. Kita hit halaman utama pindown untuk mendapatkan session/cookies (seolah-olah browser asli)
+    const initRes = await axios.get("https://pindown.io/en1", {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.162 Mobile Safari/537.36"
+      }
+    });
+    const cookies = initRes.headers["set-cookie"]?.join("; ") || "";
+
+    // b. Kirim POST (Submit Form) langsung ke endpoint /action milik mereka
+    const formData = new URLSearchParams();
+    formData.append("url", pinUrl);
+
+    const response = await axios.post("https://pindown.io/action", formData.toString(), {
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Origin": "https://pindown.io",
+        "Referer": "https://pindown.io/en1",
+        "Cookie": cookies,
+        "User-Agent": "Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.162 Mobile Safari/537.36",
+        "X-Requested-With": "XMLHttpRequest"
+      }
+    });
+
+    const result = response.data;
     
     if (!result || !result.html) {
       throw new Error("Gagal mengambil data dari server pindown.");
     }
 
-    const html = result.html
-    const downloadLinks = []
+    const html = result.html;
+    const downloadLinks = [];
     
-    const matches = html.match(/https:\/\/dl\.pincdn\.app\/v2\?token=[^"'\s]+/g)
-    if (matches) downloadLinks.push(...[...new Set(matches)])
+    // c. Regex ekstrak data yang sama dengan kodingan Playwright Anda
+    const matches = html.match(/https:\/\/dl\.pincdn\.app\/v2\?token=[^"'\s]+/g);
+    if (matches) downloadLinks.push(...[...new Set(matches)]);
     
-    const directMatches = html.match(/https:\/\/v1\.pinimg\.com\/videos\/[^"'\s]+\.mp4/g)
-    if (directMatches) downloadLinks.push(...[...new Set(directMatches)])
+    const directMatches = html.match(/https:\/\/v1\.pinimg\.com\/videos\/[^"'\s]+\.mp4/g);
+    if (directMatches) downloadLinks.push(...[...new Set(directMatches)]);
     
-    const titleMatch = html.match(/<strong>([^<]+)<\/strong>/)
-    const descriptionMatch = html.match(/<span class='video-des'>([^<]+)<\/span>/)
+    const titleMatch = html.match(/<strong>([^<]+)<\/strong>/);
+    const descriptionMatch = html.match(/<span class='video-des'>([^<]+)<\/span>/);
 
     if (downloadLinks.length === 0) {
       throw new Error("Gagal menemukan media di Pinterest.");
@@ -150,11 +153,8 @@ async function pindownDownloader(pinUrl) {
       caption: `${titleMatch ? titleMatch[1] : ""} - ${descriptionMatch ? descriptionMatch[1] : ""}`.trim(),
       downloads: downloadLinks.map(url => ({ url: url }))
     };
-  } finally {
-    // Pastikan browser selalu ditutup agar tidak memakan RAM
-    if (browser) {
-      await browser.close();
-    }
+  } catch (error) {
+    throw new Error("Terjadi kesalahan sistem saat mengekstrak Pinterest: " + error.message);
   }
 }
 
