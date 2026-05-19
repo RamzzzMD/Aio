@@ -99,63 +99,214 @@ async function loveThreadsDownloader(threadsUrl) {
   };
 }
 
-// 3. Scraper Pinterest (Pindown via Axios, Tanpa Playwright)
-async function pindownDownloader(pinUrl) {
-  try {
-    // a. Kita hit halaman utama pindown untuk mendapatkan session/cookies (seolah-olah browser asli)
-    const initRes = await axios.get("https://pindown.io/en1", {
+// 3. Native Pinterest Scraper (Pindl)
+async function pindl(url) {
+  if (!url) throw new Error("Where's the Pinterest Link!");
+  if (!url.includes('pin')) throw new Error("It should be a Pinterest link, not another link!");
+  
+  const response = await axios.get(url, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.162 Mobile Safari/537.36"
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      },
+      maxRedirects: 5
+  });
+  
+  const html = response.data;
+  let title = null;
+  let caption = null;
+  let mainImageUrl = null;
+  let isVideo = false;
+  let author = null;
+  let createdAt = null;
+  let statistics = {};
+  let allMedia = [];
+  
+  const relayMatch = html.match(/"v3GetPinQueryv2":([\s\S]*?\}\}\}\}\}\);<\/script>|[\s\S]*?\}\}\}\}\})/);
+  
+  if (relayMatch && relayMatch[1]) {
+      try {
+          let jsonString = '{"data":' + relayMatch[1].split('});</script>')[0].trim();
+          if (jsonString.endsWith(';')) jsonString = jsonString.slice(0, -1);
+          const parsed = JSON.parse(jsonString);
+          const pinData = parsed?.data?.v3GetPinQueryv2?.data;
+          
+          if (pinData) {
+              title = pinData.title || pinData.closeupUnifiedTitle || pinData.gridTitle || null;
+              caption = pinData.closeupUnifiedDescription || pinData.description || pinData.seoDescription || null;
+              isVideo = pinData.videos !== null;
+              mainImageUrl = pinData.images_orig?.url || pinData.images_736x?.url || null;
+              
+              if (isVideo) {
+                  const videoList = pinData.videos?.videoList;
+                  if (videoList) {
+                      allMedia = Object.keys(videoList)
+                          .filter(key => videoList[key] && typeof videoList[key] === 'object' && videoList[key].url)
+                          .map(key => ({
+                              type: 'video',
+                              quality: key.replace(/^v/, '').toUpperCase(),
+                              width: videoList[key].width || null,
+                              height: videoList[key].height || null,
+                              url: videoList[key].url
+                          }));
+                  }
+              } else if (pinData.carouselData && pinData.carouselData.carouselSlots) {
+                  allMedia = pinData.carouselData.carouselSlots.map((slot) => ({
+                      type: 'image',
+                      quality: 'ORIGINAL',
+                      width: slot.images_1200x?.width || slot.images_736x?.width || null,
+                      height: slot.images_1200x?.height || slot.images_736x?.height || null,
+                      url: slot.images_1200x?.url || slot.images_736x?.url || slot.images_orig?.url || null
+                  }));
+              } else if (mainImageUrl) {
+                  allMedia.push({
+                      type: 'image',
+                      quality: 'ORIGINAL',
+                      width: pinData.images_orig?.width || null,
+                      height: pinData.images_orig?.height || null,
+                      url: mainImageUrl
+                  });
+              }
+              
+              if (pinData.pinner || pinData.closeupAttribution) {
+                  const pinner = pinData.pinner || pinData.closeupAttribution;
+                  author = {
+                      username: pinner.username || null,
+                      fullName: pinner.fullName || null,
+                      avatar: pinner.imageLargeUrl || pinner.imageMediumUrl || null
+                  };
+              }
+              createdAt = pinData.createdAt || null;
+              statistics = {
+                  saves: pinData.aggregatedPinData?.aggregatedStats?.saves || 0,
+                  comments: pinData.commentCount || 0,
+                  shares: pinData.shareCount || 0
+              };
+          }
+      } catch (err) {
+          // Lewati ke sistem fallback jika JSON parse gagal
       }
-    });
-    const cookies = initRes.headers["set-cookie"]?.join("; ") || "";
-
-    // b. Kirim POST (Submit Form) langsung ke endpoint /action milik mereka
-    const formData = new URLSearchParams();
-    formData.append("url", pinUrl);
-
-    const response = await axios.post("https://pindown.io/action", formData.toString(), {
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Origin": "https://pindown.io",
-        "Referer": "https://pindown.io/en1",
-        "Cookie": cookies,
-        "User-Agent": "Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.162 Mobile Safari/537.36",
-        "X-Requested-With": "XMLHttpRequest"
-      }
-    });
-
-    const result = response.data;
-    
-    if (!result || !result.html) {
-      throw new Error("Gagal mengambil data dari server pindown.");
-    }
-
-    const html = result.html;
-    const downloadLinks = [];
-    
-    // c. Regex ekstrak data yang sama dengan kodingan Playwright Anda
-    const matches = html.match(/https:\/\/dl\.pincdn\.app\/v2\?token=[^"'\s]+/g);
-    if (matches) downloadLinks.push(...[...new Set(matches)]);
-    
-    const directMatches = html.match(/https:\/\/v1\.pinimg\.com\/videos\/[^"'\s]+\.mp4/g);
-    if (directMatches) downloadLinks.push(...[...new Set(directMatches)]);
-    
-    const titleMatch = html.match(/<strong>([^<]+)<\/strong>/);
-    const descriptionMatch = html.match(/<span class='video-des'>([^<]+)<\/span>/);
-
-    if (downloadLinks.length === 0) {
-      throw new Error("Gagal menemukan media di Pinterest.");
-    }
-
-    return {
-      platform: "Pinterest",
-      caption: `${titleMatch ? titleMatch[1] : ""} - ${descriptionMatch ? descriptionMatch[1] : ""}`.trim(),
-      downloads: downloadLinks.map(url => ({ url: url }))
-    };
-  } catch (error) {
-    throw new Error("Terjadi kesalahan sistem saat mengekstrak Pinterest: " + error.message);
   }
+  
+  if (!title) {
+      const titleRegex = html.match(/"title"\s*:\s*"([^"]+)"/) || html.match(/"gridTitle"\s*:\s*"([^"]+)"/);
+      title = titleRegex ? titleRegex[1] : null;
+  }
+  
+  if (!caption || caption.trim() === '') {
+      const captionRegex = 
+          html.match(/"closeupUnifiedDescription"\s*:\s*"([^"]+)"/) || 
+          html.match(/"description"\s*:\s*"([^"]+)"/) ||
+          html.match(/"seoDescription"\s*:\s*"([^"]+)"/) || 
+          html.match(/meta\s+name="description"\s+content="([^"]+)"/) || 
+          html.match(/meta\s+property="og:description"\s+content="([^"]+)"/);
+          
+      caption = captionRegex ? captionRegex[1] : '';
+      if (caption.includes("discovered by") && caption.includes("Discover (and save!)")) {
+          caption = ''; 
+      }
+  }
+  
+  if (!createdAt) {
+      const dateRegex = html.match(/"createdAt"\s*:\s*"([^"]+)"/);
+      createdAt = dateRegex ? dateRegex[1] : null;
+  }
+  
+  if (!author) {
+      const usernameRegex = html.match(/"username"\s*:\s*"([^"]+)"/);
+      const fullNameRegex = html.match(/"fullName"\s*:\s*"([^"]+)"/);
+      const avatarRegex = html.match(/"imageLargeUrl"\s*:\s*"([^"]+)"/) || html.match(/"imageMediumUrl"\s*:\s*"([^"]+)"/);
+      if (usernameRegex || fullNameRegex) {
+          author = {
+              username: usernameRegex ? usernameRegex[1] : null,
+              fullName: fullNameRegex ? fullNameRegex[1] : null,
+              avatar: avatarRegex ? avatarRegex[1] : null
+          };
+      }
+  }
+  
+  if (Object.keys(statistics).length === 0) {
+      const savesRegex = html.match(/"saves"\s*:\s*([0-9]+)/);
+      const commentsRegex = html.match(/"commentCount"\s*:\s*([0-9]+)/);
+      const sharesRegex = html.match(/"shareCount"\s*:\s*([0-9]+)/);
+      statistics = {
+          saves: savesRegex ? parseInt(savesRegex[1], 10) : 0,
+          comments: commentsRegex ? parseInt(commentsRegex[1], 10) : 0,
+          shares: sharesRegex ? parseInt(sharesRegex[1], 10) : 0
+      };
+  }
+  
+  const hasVideoPattern = html.includes('"videos":{') || html.includes('"videoList"');
+  if (hasVideoPattern || isVideo) {
+      const videoBlockRegex = /"(v[0-9A-Z]+)"\s*:\s*\{[^}]*"url"\s*:\s*"([^"]+)"/g;
+      let videoMatch;
+      let tempVideos = [];
+      while ((videoMatch = videoBlockRegex.exec(html)) !== null) {
+          if (!tempVideos.some(v => v.url === videoMatch[2])) {
+              tempVideos.push({
+                  type: 'video',
+                  quality: videoMatch[1].replace(/^v/, '').toUpperCase(),
+                  url: videoMatch[2]
+              });
+          }
+      }
+      if (tempVideos.length > 0) {
+          allMedia = tempVideos;
+          isVideo = true;
+      }
+  }
+  
+  if (!isVideo && allMedia.length <= 1) {
+      const carouselBlockRegex = /"carouselSlots"\s*:\s*\[([\s\S]*?)\]\s*,\s*"id"/;
+      const carouselMatch = html.match(carouselBlockRegex);
+      if (carouselMatch && carouselMatch[1]) {
+          const slots = carouselMatch[1].split(/Properties|slotId/);
+          let tempMedia = [];
+          slots.forEach(slotStr => {
+              const imgUrlRegex = /"images_(?:1200x|736x|orig)"\s*:\s*\{[^}]+?"url"\s*:\s*"([^"]+)"/;
+              const imgUrlMatch = slotStr.match(imgUrlRegex);
+              if (imgUrlMatch && imgUrlMatch[1]) {
+                  const imgUrl = imgUrlMatch[1];
+                  if (!tempMedia.some(img => img.url === imgUrl)) {
+                      tempMedia.push({
+                          type: 'image',
+                          quality: 'ORIGINAL',
+                          url: imgUrl
+                      });
+                  }
+              }
+          });
+          if (tempMedia.length > 0) {
+              allMedia = tempMedia;
+          }
+      }
+  }
+  
+  if (allMedia.length === 0) {
+      const singleImageRegex = html.match(/"images_orig"\s*:\s*\{\s*"url"\s*:\s*"([^"]+)"/) || html.match(/meta\s+property="og:image"\s+content="([^"]+)"/);
+      if (singleImageRegex) {
+          allMedia.push({
+              type: 'image',
+              quality: 'ORIGINAL',
+              url: singleImageRegex[1]
+          });
+      }
+  }
+  
+  if (allMedia.length === 0) {
+      throw new Error("Gagal mengekstrak media dari URL Pinterest ini.");
+  }
+
+  // Format data agar sesuai dengan frontend (normalizeApiResponse)
+  return {
+      platform: "Pinterest",
+      caption: title ? `${title} - ${caption || ''}` : caption || "Pinterest Post",
+      author: author?.fullName || author?.username || "Unknown Pinterest User",
+      author_avatar: author?.avatar || "",
+      downloads: allMedia.map(item => ({
+          url: item.url,
+          quality: item.quality || 'Media'
+      }))
+  };
 }
 
 export async function POST(request) {
@@ -169,7 +320,7 @@ export async function POST(request) {
     if (url.includes("threads.net")) {
       data = await loveThreadsDownloader(url);
     } else if (url.includes("pin.it") || url.includes("pinterest.com") || url.includes("pinterest.co")) {
-      data = await pindownDownloader(url);
+      data = await pindl(url); // Menggunakan Pindl native regex scraper
     } else {
       data = await downr(url);
     }
